@@ -646,7 +646,9 @@ def compute_rule_probe_preq_batch(
       1. Roll out n_ic trajectories.
       2. Train a Conv3x3 probe autoregressively (k=1) on all (s_t, s_{t+1}) pairs.
       3. Score by area under the loss curve above the final loss, an analog of
-         the prequential description length from Finzi et al. (arXiv:2601.03220).
+         the prequential description length (Blier & Ollivier 2018,
+         arXiv:1802.07044). See compute_rule_probe_requential_batch for the
+         requential-coding refinement from Finzi et al. (arXiv:2601.03220).
 
     Differences vs compute_rule_probe_batch:
       - no fixed-k horizon: k=1 autoregressive over the whole rollout
@@ -668,3 +670,183 @@ def compute_rule_probe_preq_batch(
     return _train_probes_from_rollouts_preq(
         sims, d_state, n_groups, probe_steps, lr, probe_rng_seed,
     )
+
+
+#############################################################
+#  Requential coding (Finzi et al. arXiv:2601.03220)
+#
+#  Same probe architecture as the prequential variant, but the
+#  probe is trained by distillation against the NCA's *true*
+#  per-position predictive distribution (the teacher), and the
+#  score is the area under the KL(teacher || student) curve. The
+#  curve IS the description length the student pays to converge
+#  to the teacher, with no sampling-noise floor and no separate
+#  loss/measurement distinction.
+#############################################################
+
+
+def _teacher_logits_from_states(states, net_params, d_state, n_groups, identity_bias, temperature):
+    """
+    states: (I, T, H, W, G) integer states.
+    Returns scaled teacher logits shape (I, T, H, W, G, D) such that
+    softmax(logits, axis=-1) is the NCA's per-position next-state distribution
+    (matching step_state up to the categorical sample).
+    """
+    I, T, H, W, G = states.shape
+    s_oh = jax.nn.one_hot(states, d_state)  # (I, T, H, W, G, D)
+    s_in = rearrange(s_oh, "I T H W G D -> (I T) H W (G D)")
+
+    nca = NCANetwork(d_state=d_state * n_groups)
+    logits_packed = jax.vmap(lambda x: nca.apply(net_params, x))(s_in)
+    logits = rearrange(
+        logits_packed, "(I T) H W (G D) -> I T H W G D", I=I, T=T, G=n_groups,
+    )
+
+    scaled = (logits + s_oh * identity_bias) / temperature
+    return scaled
+
+
+def _train_probe_one_rule_requential(rng, rollouts, net_params,
+                                     d_state, n_groups, identity_bias, temperature,
+                                     probe_steps, lr):
+    """
+    Requential probe (Finzi et al. arXiv:2601.03220).
+
+    rollouts: (n_ic, T, H, W, G) integer states.
+    net_params: NCA net parameters for THIS rule (pytree, no batch dim).
+
+    Distills a tiny Conv3x3 student against the teacher's per-position
+    distribution via KL(teacher || student). Returns
+    (req_gain, req_length, final_kl, kl_baseline).
+    """
+    d_total = d_state * n_groups
+    T = rollouts.shape[1]
+
+    x = rollouts[:, :T - 1]              # (I, T-1, H, W, G)
+    x_oh = jax.nn.one_hot(x, d_state)    # (I, T-1, H, W, G, D)
+    x_oh_in = rearrange(x_oh, "I T H W G D -> (I T) H W (G D)")
+
+    teacher_logits = _teacher_logits_from_states(
+        x, net_params, d_state, n_groups, identity_bias, temperature,
+    )  # (I, T-1, H, W, G, D)
+    teacher_log_probs = jax.nn.log_softmax(teacher_logits, axis=-1)
+    teacher_probs = jnp.exp(teacher_log_probs)
+    teacher_log_probs_flat = rearrange(teacher_log_probs, "I T H W G D -> (I T) H W G D")
+    teacher_probs_flat = rearrange(teacher_probs, "I T H W G D -> (I T) H W G D")
+
+    probe = _ProbeConv(d_total=d_total)
+    rng_init, _ = split(rng)
+    params = probe.init(rng_init, x_oh_in[0])
+
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(params)
+
+    def forward(p, batch):
+        logits = jax.vmap(probe.apply, in_axes=(None, 0))(p, batch)
+        return rearrange(logits, "N H W (G D) -> N H W G D", G=n_groups)
+
+    def kl_loss(p):
+        student_logits = forward(p, x_oh_in)
+        student_log_probs = jax.nn.log_softmax(student_logits, axis=-1)
+        # KL(teacher || student) per position, mean over batch
+        kl = jnp.sum(
+            teacher_probs_flat * (teacher_log_probs_flat - student_log_probs),
+            axis=-1,
+        )
+        return kl.mean()
+
+    def step(carry, _):
+        params, opt_state = carry
+        loss, grads = jax.value_and_grad(kl_loss)(params)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    (params, _), kl_traj = lax.scan(step, (params, opt_state), None, length=probe_steps)
+    final_kl = kl_traj[-1]
+
+    # Baseline: KL(teacher || marginal-of-teacher) — the cost a student that
+    # never moves off the unconditional histogram of teacher predictions pays.
+    p_marg = teacher_probs_flat.mean(axis=(0, 1, 2))   # (G, D)
+    log_p_marg = jnp.log(p_marg + 1e-10)
+    kl_to_marg = jnp.sum(
+        teacher_probs_flat * (teacher_log_probs_flat - log_p_marg),
+        axis=-1,
+    )
+    kl_baseline = kl_to_marg.mean()
+
+    # Mirror compute_rule_probe_preq_batch: area between the KL curve and its
+    # final (computationally-bounded) floor, normalised by the marginal KL.
+    # The interpretation matches preq_gain: fraction of marginal entropy worth
+    # of "extra" KL that the bounded student integrates during training.
+    req_length = jnp.sum(jnp.maximum(kl_traj - final_kl, 0.0))
+    req_gain = jnp.maximum(
+        0.0, req_length / jnp.maximum(kl_baseline * probe_steps, 1e-10),
+    )
+    return req_gain, req_length, final_kl, kl_baseline
+
+
+def _per_rule_net_params(seeds, grid, d_state, n_groups, identity_bias, temperature):
+    """Recover the NCA net_params pytree for each rule seed, batched along axis 0."""
+    generator = NCA(
+        grid_size=grid, d_state=d_state, n_groups=n_groups,
+        identity_bias=identity_bias, temperature=temperature,
+    )
+    all_params = jax.vmap(generator.default_params)(seeds)
+    return all_params['net_params']
+
+
+def compute_rule_probe_requential_batch(
+    seeds: jnp.ndarray,
+    grid: int = 12,
+    d_state: int = 10,
+    n_groups: int = 1,
+    identity_bias: float = 0.,
+    temperature: float = 1e-4,
+    n_ic: int = 4,
+    rollout_steps: int = 24,
+    start_step: int = 0,
+    probe_steps: int = 200,
+    lr: float = 1e-2,
+    probe_rng_seed: int = 0,
+):
+    """
+    Requential-coding variant of the probe score (Finzi et al. arXiv:2601.03220).
+
+    For each candidate rule:
+      1. Roll out n_ic trajectories.
+      2. Distill a tiny Conv3x3 student against the NCA teacher's per-position
+         distribution via KL(teacher || student), k=1 autoregressive.
+      3. Score by the area under the KL trajectory, normalised by
+         KL(teacher || marginal) * probe_steps.
+
+    Differences vs compute_rule_probe_preq_batch:
+      - loss IS the description-length integrand (no entropy_floor subtraction,
+        no sampling noise) — cleaner match to the paper's framing
+      - teacher = exact NCA predictive distribution per position, not sampled
+        labels, so the score doesn't degrade when the dynamics are stochastic
+
+    Returns
+    -------
+    req_gain     : (B,)  req_length / (kl_baseline * probe_steps), in [0, 1]
+    req_length   : (B,)  raw area under KL(teacher || student) curve, in nats
+    final_kl     : (B,)  KL at the final step (analogue of entropy_floor)
+    kl_baseline  : (B,)  KL(teacher || marginal-of-teacher) reference cost
+    """
+    sims = _generate_rule_rollouts(
+        seeds, grid, d_state, n_groups, identity_bias, temperature,
+        rollout_steps, n_ic, start_step, ic_rng_seed=probe_rng_seed + 1,
+    )
+    net_params_batched = _per_rule_net_params(
+        seeds, grid, d_state, n_groups, identity_bias, temperature,
+    )
+
+    B = sims.shape[0]
+    probe_rngs = split(jax.random.PRNGKey(probe_rng_seed), B)
+    train_one = partial(
+        _train_probe_one_rule_requential,
+        d_state=d_state, n_groups=n_groups,
+        identity_bias=identity_bias, temperature=temperature,
+        probe_steps=probe_steps, lr=lr,
+    )
+    return jax.jit(jax.vmap(train_one))(probe_rngs, sims, net_params_batched)
