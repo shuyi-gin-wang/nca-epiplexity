@@ -17,9 +17,27 @@
 <header>
   <h1>Evolving NCAs with Epiplexity</h1>
   <p class="lede">
-    What dynamics fall out of a (&mu;+&lambda;) evolution strategy when we
-    explicitly target a gzip-compression ratio? Below: six runs that share
-    everything except the target compressibility of the rollout.
+    <em>Epiplexity</em>, introduced by Finzi et&nbsp;al.&nbsp;(2026,
+    <a href="https://arxiv.org/abs/2601.03220">arXiv:2601.03220</a>), is a
+    formalization of information for <strong>computationally bounded
+    observers</strong>: it counts only structural, learnable content and
+    deliberately excludes incompressible randomness (PRNG output, chaotic
+    dynamics) that a Shannon- or Kolmogorov-style measure would still call
+    informative.
+  </p>
+  <p class="lede">
+    Our fitness here is an NCA analogue of that idea. The
+    <code>preq_length</code> term fits a small linear probe online against the
+    rollout transitions and sums the per-step MSE above the floor. That probe
+    is the <strong>bounded student</strong>: it has tiny capacity and a fixed
+    optimization budget, so its prequential loss is a stand-in for
+    "structure a limited learner can extract." We multiply it by a Gaussian
+    gate on the gzip ratio that penalizes <em>both</em> over-compressible
+    (trivial) and under-compressible (chaotic) dynamics &mdash; the same
+    "exclude time-bounded entropy" move the paper makes. Sweeping the gzip
+    target along that band moves the operating point on the
+    "rich but learnable" axis. Below: six runs that share everything except
+    the target compressibility of the rollout.
   </p>
 </header>
 
