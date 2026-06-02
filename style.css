@@ -1,0 +1,141 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --fg: #e7e9ee;
+  --muted: #9aa3b2;
+  --accent: #6ea8ff;
+  --border: #232733;
+  --code-bg: #11141a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.92em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+header, section, footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+header { padding-top: 56px; padding-bottom: 16px; }
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 32px;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 17px;
+  max-width: 760px;
+  margin: 0 0 12px;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.methods ul,
+.findings ol {
+  padding-left: 22px;
+  margin: 0;
+}
+
+.methods li,
+.findings li {
+  margin-bottom: 8px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 14px;
+  margin: -8px 0 20px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.card dl {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: 4px 14px;
+  margin: 12px 0 8px;
+  font-size: 14px;
+}
+
+.card dt { color: var(--muted); }
+.card dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.card .note {
+  color: var(--fg);
+  font-size: 14px;
+  margin: 6px 0 8px;
+}
+
+.card .extra {
+  color: var(--muted);
+  font-size: 13px;
+  margin: auto 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+footer {
+  color: var(--muted);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+}

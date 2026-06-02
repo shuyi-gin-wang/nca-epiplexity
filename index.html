@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NCA evolution: pdrop0 gzip-target sweep</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <h1>Evolving NCAs at <code>p_drop=0</code>: a gzip-complexity sweep</h1>
+  <p class="lede">
+    What dynamics fall out of a (&mu;+&lambda;) evolution strategy when we
+    explicitly target a gzip-compression ratio? Below: six runs that share
+    everything except the target compressibility of the rollout.
+  </p>
+  <p class="meta">
+    Repository:
+    <a href="https://github.com/shuyi-gin-wang/synthetic-pre-pre-training">shuyi-gin-wang/synthetic-pre-pre-training</a>
+    &middot; branch <code>probe-score-experiments</code>
+    &middot; script
+    <a href="https://github.com/shuyi-gin-wang/synthetic-pre-pre-training/blob/probe-score-experiments/scripts/evolve_nca_preq_gzip_continuous_torch.py"><code>scripts/evolve_nca_preq_gzip_continuous_torch.py</code></a>
+  </p>
+</header>
+
+<section class="methods">
+  <h2>Setup</h2>
+  <ul>
+    <li>16&times;16 continuous NCA, 3 state channels, &Delta;t=0.05.</li>
+    <li>Fitness = <code>preq_length</code> &times; gaussian-band gate around a
+      target gzip ratio: <code>exp(-(gzip - target)<sup>2</sup> / (2&middot;0.2<sup>2</sup>))</code>.</li>
+    <li><code>preq_length</code> is the prequential length: a linear probe is
+      fit on rollout transitions, and we sum the per-step MSE above the final
+      loss floor &mdash; high values mean the dynamics are not trivially
+      predictable by the probe.</li>
+    <li>(&mu;+&lambda;) ES with pop=128, elite=16, &sigma;: 0.1 &rarr; ~0.005 over 600 generations.</li>
+    <li><strong><code>p_drop = 0</code></strong> &mdash; no stochastic per-cell update mask during evolution. Every cell updates every step.</li>
+    <li>Trajectories below are rolled out from a fresh uniform initial condition with no dropout.</li>
+  </ul>
+</section>
+
+<section class="findings">
+  <h2>What we found</h2>
+  <ol>
+    <li><strong>The gzip gate works as a coarse complexity dial.</strong>
+      Best-of-run gzip closely tracks the target up through ~0.85; beyond that
+      the achieved ratio saturates around 0.89 even when the target is 1.0.</li>
+    <li><strong>Preq length is non-monotonic in the gzip target.</strong>
+      The highest <code>preq_length</code> we saw came at <code>target=0.85</code>
+      (preq&nbsp;&asymp;&nbsp;10.7), not at the chaotic end. Pushing for fully
+      uncompressible noise (target=1.0) doesn't buy more probe-difficulty.</li>
+    <li><strong>Visual character changes smoothly.</strong> Low targets give
+      stable, blocky patterns; mid targets give travelling structures; high
+      targets give shimmering, noise-like fields. Watch the 1000-step extended
+      rollouts to see whether structure persists.</li>
+  </ol>
+</section>
+
+<section class="gallery">
+  <h2>Sweep</h2>
+  <p class="hint">
+    Each card: the 256-step rollout of the best-ever individual from that run,
+    plus the final achieved gzip ratio and prequential length. Click the
+    extended link for the 1000-step continuation.
+  </p>
+
+  <div class="cards">
+
+    <article class="card">
+      <h3>Target gzip = 0.30</h3>
+      <img src="gifs/torch_pdrop0/target03_256.gif" alt="target 0.30 rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.277</dd>
+        <dt>preq length</dt><dd>2.70</dd>
+        <dt>generations</dt><dd>600</dd>
+      </dl>
+      <p class="note">Low-complexity dynamics: large solid regions, slow drift.</p>
+      <p class="extra">
+        <a href="gifs/torch_pdrop0/target03_1000.gif">extended 1000-step rollout (4.7 MB)</a>
+        &middot; <a href="img/torch_pdrop0/target03_curve.png">training curve</a>
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Target gzip = 0.50</h3>
+      <img src="gifs/torch_pdrop0/target05_256.gif" alt="target 0.50 rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.507</dd>
+        <dt>preq length</dt><dd>6.96</dd>
+        <dt>generations</dt><dd>600</dd>
+      </dl>
+      <p class="note">Structured but active &mdash; textured cells with local motion.</p>
+      <p class="extra">
+        <a href="gifs/torch_pdrop0/target05_1000.gif">extended 1000-step rollout (6.6 MB)</a>
+        &middot; <a href="img/torch_pdrop0/target05_curve.png">training curve</a>
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Target gzip = 0.70</h3>
+      <img src="gifs/torch_pdrop0/target07_256.gif" alt="target 0.70 rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.628</dd>
+        <dt>preq length</dt><dd>1.63</dd>
+        <dt>generations</dt><dd>600</dd>
+      </dl>
+      <p class="note">Below-target gzip and low preq &mdash; this one likely hit a poor local optimum.</p>
+      <p class="extra">
+        <a href="gifs/torch_pdrop0/target07_1000.gif">extended 1000-step rollout (9.4 MB)</a>
+        &middot; <a href="img/torch_pdrop0/target07_curve.png">training curve</a>
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Target gzip = 0.85</h3>
+      <img src="gifs/torch_pdrop0/target085_256.gif" alt="target 0.85 rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.792</dd>
+        <dt>preq length</dt><dd>10.70</dd>
+        <dt>generations</dt><dd>600</dd>
+      </dl>
+      <p class="note">Peak preq length in the sweep. Rich travelling-pattern dynamics.</p>
+      <p class="extra">
+        <a href="gifs/torch_pdrop0/target085_1000.gif">extended 1000-step rollout (5.5 MB)</a>
+        &middot; <a href="img/torch_pdrop0/target085_curve.png">training curve</a>
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Target gzip = 0.95</h3>
+      <img src="gifs/torch_pdrop0/target095_256.gif" alt="target 0.95 rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.863</dd>
+        <dt>preq length</dt><dd>1.98</dd>
+        <dt>generations</dt><dd>1200</dd>
+      </dl>
+      <p class="note">Near-chaotic flicker; gzip plateaus below the target even with 2&times; the generations.</p>
+      <p class="extra">
+        <a href="gifs/torch_pdrop0/target095_1000.gif">extended 1000-step rollout (12 MB)</a>
+        &middot; <a href="img/torch_pdrop0/target095_curve.png">training curve</a>
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Target gzip = 1.00</h3>
+      <img src="gifs/torch_pdrop0/target10_256.gif" alt="target 1.00 rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.891</dd>
+        <dt>preq length</dt><dd>10.41</dd>
+        <dt>generations</dt><dd>3000</dd>
+      </dl>
+      <p class="note">Maximum-noise objective. Achieved gzip caps around 0.89 &mdash; the apparent ceiling for this NCA.</p>
+      <p class="extra">
+        <a href="gifs/torch_pdrop0/target10_1000.gif">extended 1000-step rollout (8.8 MB)</a>
+        &middot; <a href="img/torch_pdrop0/target10_curve.png">training curve</a>
+      </p>
+    </article>
+
+  </div>
+</section>
+
+<footer>
+  <p>
+    Generated from logs in
+    <code>scripts/demo_out/runs/torch_pdrop0/</code>.
+    All metrics are the final-generation best from
+    <code>evolve_nca_preq_gzip_log_torch.tsv</code>.
+  </p>
+</footer>
+</body>
+</html>
