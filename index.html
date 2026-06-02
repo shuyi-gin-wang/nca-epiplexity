@@ -26,16 +26,11 @@
     informative.
   </p>
   <p class="lede">
-    Our fitness uses a small online linear probe (the <strong>bounded
-    student</strong>) as the observer. On its own, probe loss is easy to
-    game: NCAs that collapse to a static or near-uniform field also have
-    low probe loss, so evolution keeps rediscovering trivial fixed points.
-    The gzip band exists to <em>filter those out</em> &mdash; we multiply
-    the probe term by a Gaussian on the gzip ratio of the rollout, which
-    drives fitness to zero on highly compressible (collapsed) rollouts and
-    also pushes back on incompressible noise. Sweeping the target across
-    the band shows which complexity setting actually keeps the search
-    away from the easy attractors.
+    Our observer is a tiny online linear probe &mdash; the
+    <strong>bounded student</strong>. Probe loss alone is easy to game:
+    collapsed, static NCAs score well too. The gzip band kills fitness on
+    those (and on the noise-only extreme); the sweep below explores which
+    target keeps evolution away from the easy attractors.
   </p>
 </header>
 
