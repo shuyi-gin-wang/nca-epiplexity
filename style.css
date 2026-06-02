@@ -102,7 +102,6 @@ h3 {
 .lede {
   color: var(--muted);
   font-size: 17px;
-  max-width: 760px;
   margin: 0 0 12px;
 }
 
