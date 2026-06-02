@@ -27,8 +27,8 @@
   <p class="lede">
     We evolve NCAs toward increased learnable complexity through a fixed
     linear probe that acts as a <strong>bounded student</strong>. Evolution
-    otherwise finds <em>collapse basins</em> &mdash; rollouts that settle to
-    a constant or low-variance field, where every next-step prediction is
+    otherwise finds <em>collapse basins</em> (rollouts that settle to a
+    constant or low-variance field), where every next-step prediction is
     trivial and the prequential signal goes silent. A gzip band on the
     rollout is multiplied into the fitness as a filter, zeroing out both
     collapsed (gzip &rarr; 0) and noise-dominated (gzip &rarr; 1) regimes.
