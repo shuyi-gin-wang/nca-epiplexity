@@ -81,8 +81,6 @@
       <p class="note">Low-complexity dynamics: large solid regions, slow drift.</p>
       <p class="extra">
         <a href="gifs/torch_pdrop0/target03_1000.gif">extended 1000-step rollout (4.7 MB)</a>
-        &middot; <a href="img/torch_pdrop0/target03_curve.png">training curve</a>
-        &middot; <a href="img/torch_pdrop0/target03_probe.png">probe snapshots</a>
       </p>
     </article>
 
@@ -97,8 +95,6 @@
       <p class="note">Structured but active &mdash; textured cells with local motion.</p>
       <p class="extra">
         <a href="gifs/torch_pdrop0/target05_1000.gif">extended 1000-step rollout (6.6 MB)</a>
-        &middot; <a href="img/torch_pdrop0/target05_curve.png">training curve</a>
-        &middot; <a href="img/torch_pdrop0/target05_probe.png">probe snapshots</a>
       </p>
     </article>
 
@@ -113,8 +109,6 @@
       <p class="note">Below-target gzip and low preq &mdash; this one likely hit a poor local optimum.</p>
       <p class="extra">
         <a href="gifs/torch_pdrop0/target07_1000.gif">extended 1000-step rollout (9.4 MB)</a>
-        &middot; <a href="img/torch_pdrop0/target07_curve.png">training curve</a>
-        &middot; <a href="img/torch_pdrop0/target07_probe.png">probe snapshots</a>
       </p>
     </article>
 
@@ -129,8 +123,6 @@
       <p class="note">Peak preq length in the sweep. Rich travelling-pattern dynamics.</p>
       <p class="extra">
         <a href="gifs/torch_pdrop0/target085_1000.gif">extended 1000-step rollout (5.5 MB)</a>
-        &middot; <a href="img/torch_pdrop0/target085_curve.png">training curve</a>
-        &middot; <a href="img/torch_pdrop0/target085_probe.png">probe snapshots</a>
       </p>
     </article>
 
@@ -145,8 +137,6 @@
       <p class="note">Near-chaotic flicker; gzip plateaus below the target even with 2&times; the generations.</p>
       <p class="extra">
         <a href="gifs/torch_pdrop0/target095_1000.gif">extended 1000-step rollout (12 MB)</a>
-        &middot; <a href="img/torch_pdrop0/target095_curve.png">training curve</a>
-        &middot; <a href="img/torch_pdrop0/target095_probe.png">probe snapshots</a>
       </p>
     </article>
 
@@ -161,11 +151,43 @@
       <p class="note">Maximum-noise objective. Achieved gzip caps around 0.89 &mdash; the apparent ceiling for this NCA.</p>
       <p class="extra">
         <a href="gifs/torch_pdrop0/target10_1000.gif">extended 1000-step rollout (8.8 MB)</a>
-        &middot; <a href="img/torch_pdrop0/target10_curve.png">training curve</a>
-        &middot; <a href="img/torch_pdrop0/target10_probe.png">probe snapshots</a>
       </p>
     </article>
 
+  </div>
+</section>
+
+<section class="plots">
+  <h2>Training curves</h2>
+  <p class="hint">
+    Best individual's <code>preq_length</code> and gzip ratio over generations,
+    one panel per target.
+  </p>
+  <div class="plot-grid">
+    <figure><figcaption>target = 0.30</figcaption><img src="img/torch_pdrop0/target03_curve.png" alt="target 0.30 training curve" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.50</figcaption><img src="img/torch_pdrop0/target05_curve.png" alt="target 0.50 training curve" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.70</figcaption><img src="img/torch_pdrop0/target07_curve.png" alt="target 0.70 training curve" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.85</figcaption><img src="img/torch_pdrop0/target085_curve.png" alt="target 0.85 training curve" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.95</figcaption><img src="img/torch_pdrop0/target095_curve.png" alt="target 0.95 training curve" loading="lazy" /></figure>
+    <figure><figcaption>target = 1.00</figcaption><img src="img/torch_pdrop0/target10_curve.png" alt="target 1.00 training curve" loading="lazy" /></figure>
+  </div>
+</section>
+
+<section class="plots">
+  <h2>Probe curves</h2>
+  <p class="hint">
+    Per-step probe MSE during the inner online fit, snapshotted at six
+    generations through the run. Flat low curves early on mean the rollout
+    is too trivial to learn; a non-trivial descent late in training is the
+    signal we're optimizing for.
+  </p>
+  <div class="plot-grid">
+    <figure><figcaption>target = 0.30</figcaption><img src="img/torch_pdrop0/target03_probe.png" alt="target 0.30 probe curves" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.50</figcaption><img src="img/torch_pdrop0/target05_probe.png" alt="target 0.50 probe curves" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.70</figcaption><img src="img/torch_pdrop0/target07_probe.png" alt="target 0.70 probe curves" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.85</figcaption><img src="img/torch_pdrop0/target085_probe.png" alt="target 0.85 probe curves" loading="lazy" /></figure>
+    <figure><figcaption>target = 0.95</figcaption><img src="img/torch_pdrop0/target095_probe.png" alt="target 0.95 probe curves" loading="lazy" /></figure>
+    <figure><figcaption>target = 1.00</figcaption><img src="img/torch_pdrop0/target10_probe.png" alt="target 1.00 probe curves" loading="lazy" /></figure>
   </div>
 </section>
 
