@@ -53,10 +53,6 @@
     <li><strong>The gzip gate works as a coarse complexity dial.</strong>
       Best-of-run gzip closely tracks the target up through ~0.85; beyond that
       the achieved ratio saturates around 0.89 even when the target is 1.0.</li>
-    <li><strong>Preq length is non-monotonic in the gzip target.</strong>
-      The highest <code>preq_length</code> we saw came at <code>target=0.85</code>
-      (preq&nbsp;&asymp;&nbsp;10.7), not at the chaotic end. Pushing for fully
-      uncompressible noise (target=1.0) doesn't buy more probe-difficulty.</li>
     <li><strong>Visual character changes smoothly.</strong> Low targets give
       stable, blocky patterns; mid targets give travelling structures; high
       targets give shimmering, noise-like fields. Watch the 1000-step extended
