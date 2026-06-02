@@ -208,6 +208,167 @@ class NCA():
         return img
 
 #############################################################
+#  Continuous NCA (ASAL-style: stochastic-ODE on [0,1]^D)
+#############################################################
+
+"""
+Continuous NCA substrate, matching SakanaAI/asal/substrates/nca.py.
+State is a continuous tensor in [0,1]^D updated by a forward-Euler step of a
+learned vector field, with per-cell Bernoulli dropout on the update mask.
+"""
+class NCAContinuous():
+    def __init__(self, grid_size=128, d_state=3, p_drop=0.5, dt=0.01):
+        self.grid_size = grid_size
+        self.d_state = d_state
+        self.p_drop = p_drop
+        self.dt = dt
+        self.nca = NCANetwork(d_state=d_state)
+
+    def default_params(self, rng):
+        rng, _rng = split(rng)
+        net_params = self.nca.init(
+            _rng, jnp.zeros((self.grid_size, self.grid_size, self.d_state))
+        )
+        return dict(net_params=net_params)
+
+    def init_state(self, rng, params):
+        return jax.random.uniform(
+            rng, (self.grid_size, self.grid_size, self.d_state), minval=0., maxval=1.
+        )
+
+    def step_state(self, rng, state, params):
+        dstate = self.nca.apply(params['net_params'], state)
+        mask = 1. - jnp.floor(
+            jax.random.uniform(rng, state.shape[:2], minval=0., maxval=1.) + self.p_drop
+        )
+        dstate = dstate * mask[..., None]
+        state = state + dstate * self.dt
+        return jnp.clip(state, 0., 1.)
+
+    def render_state(self, state, params, img_size=None):
+        assert self.d_state in (1, 3), "render_state expects d_state in {1, 3}"
+        if self.d_state == 1:
+            zeros = jnp.zeros_like(state)
+            img = jnp.concatenate([state, zeros, zeros], axis=-1)
+        else:
+            img = state
+        if img_size is not None:
+            img = jax.image.resize(img, (img_size, img_size, 3), method='nearest')
+        return img
+
+
+def _generate_rule_rollouts_continuous(
+    seeds, grid, d_state, p_drop, dt,
+    rollout_steps, n_ic, start_step, ic_rng_seed,
+):
+    """Continuous-NCA analogue of _generate_rule_rollouts. Returns (B, n_ic, T, H, W, D)."""
+    B = seeds.shape[0]
+    rule_seeds_tiled = jnp.tile(seeds, (n_ic, 1))
+    ic_rng = jax.random.PRNGKey(ic_rng_seed)
+    ic_seeds = split(ic_rng, n_ic * B)
+
+    generator = NCAContinuous(grid_size=grid, d_state=d_state, p_drop=p_drop, dt=dt)
+
+    def rollout_fn(ic_rng_one, rule_seed_one):
+        params = generator.default_params(rule_seed_one)
+        return rollout_simulation(
+            ic_rng_one, params, substrate=generator,
+            rollout_steps=rollout_steps, k_steps=1, time_sampling='video',
+            start_step=start_step,
+        )
+
+    sims = jax.vmap(rollout_fn, in_axes=(0, 0))(ic_seeds, rule_seeds_tiled)
+    return rearrange(sims, "(I B) T H W D -> B I T H W D", B=B, I=n_ic)
+
+
+def _train_probe_one_rule_preq_continuous(rng, rollouts, d_state, probe_steps, lr):
+    """
+    Autoregressive (k=1) continuous probe. MSE loss against variance baseline.
+    rollouts: (n_ic, T, H, W, D) in [0,1].
+    Returns (preq_gain, preq_length, mse_floor, baseline).
+    """
+    T = rollouts.shape[1]
+    x = rollouts[:, :T - 1]
+    y = rollouts[:, 1:]
+
+    x_flat = rearrange(x, "I T H W D -> (I T) H W D")
+    y_flat = rearrange(y, "I T H W D -> (I T) H W D")
+
+    probe = _ProbeConv(d_total=d_state)
+    rng_init, _ = split(rng)
+    params = probe.init(rng_init, x_flat[0])
+
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(params)
+
+    def forward(p, batch):
+        return jax.vmap(probe.apply, in_axes=(None, 0))(p, batch)
+
+    def loss_fn(p):
+        pred = forward(p, x_flat)
+        return jnp.mean((pred - y_flat) ** 2)
+
+    def step(carry, _):
+        params, opt_state = carry
+        loss, grads = jax.value_and_grad(loss_fn)(params)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    (params, _), losses = lax.scan(step, (params, opt_state), None, length=probe_steps)
+    mse_floor = losses[-1]
+
+    # marginal baseline: predict the per-channel mean of y -> baseline MSE = variance
+    mean_y = y_flat.mean(axis=(0, 1, 2), keepdims=True)
+    baseline = jnp.mean((y_flat - mean_y) ** 2)
+
+    preq_length = jnp.sum(jnp.maximum(losses - mse_floor, 0.0))
+    preq_gain = jnp.maximum(
+        0.0, preq_length / jnp.maximum(baseline * probe_steps, 1e-10)
+    )
+    return preq_gain, preq_length, mse_floor, baseline
+
+
+def _train_probes_from_rollouts_preq_continuous(sims, d_state, probe_steps, lr, probe_rng_seed):
+    B = sims.shape[0]
+    probe_rngs = split(jax.random.PRNGKey(probe_rng_seed), B)
+    train_one = partial(
+        _train_probe_one_rule_preq_continuous,
+        d_state=d_state, probe_steps=probe_steps, lr=lr,
+    )
+    return jax.jit(jax.vmap(train_one))(probe_rngs, sims)
+
+
+def compute_rule_probe_preq_continuous_batch(
+    seeds: jnp.ndarray,
+    grid: int = 128,
+    d_state: int = 3,
+    p_drop: float = 0.5,
+    dt: float = 0.01,
+    n_ic: int = 2,
+    rollout_steps: int = 64,
+    start_step: int = 0,
+    probe_steps: int = 200,
+    lr: float = 1e-2,
+    probe_rng_seed: int = 0,
+):
+    """
+    Continuous-NCA prequential probe. Mirrors compute_rule_probe_preq_batch but:
+      - state is continuous in [0,1]^D (no one-hot)
+      - probe trained with MSE
+      - baseline is per-channel variance of y (MSE of predicting the marginal mean)
+    Default config matches ASAL nca_d3: grid=128, d_state=3, p_drop=0.5, dt=0.01.
+    """
+    sims = _generate_rule_rollouts_continuous(
+        seeds, grid, d_state, p_drop, dt,
+        rollout_steps, n_ic, start_step, ic_rng_seed=probe_rng_seed + 1,
+    )
+    return _train_probes_from_rollouts_preq_continuous(
+        sims, d_state, probe_steps, lr, probe_rng_seed,
+    )
+
+
+#############################################################
 #  NCA Dataset Generation
 #############################################################
 

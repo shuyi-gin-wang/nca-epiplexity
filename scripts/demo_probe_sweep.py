@@ -126,7 +126,6 @@ def main():
             ax.plot(ks_arr, gain_curve[ex], color=color, lw=2.5, marker="o",
                     label=f"{name} (rule {ex}, gzip={float(gzip_scores[ex]):.2f})")
 
-    ax.set_xscale("log", base=2)
     ax.set_xticks(KS); ax.set_xticklabels([str(k) for k in KS])
     ax.set_xlabel("horizon  k  (steps ahead)")
     ax.set_ylabel("probe gain  (1 - loss / marginal-baseline)")
@@ -153,7 +152,6 @@ def main():
         ax.plot(ks_arr, med, color=color, lw=2.2, marker="o",
                 label=f"{name}  (n={len(idx)})")
 
-    ax.set_xscale("log", base=2)
     ax.set_xticks(KS); ax.set_xticklabels([str(k) for k in KS])
     ax.set_xlabel("horizon  k")
     ax.set_ylabel("probe gain (median; IQR shaded)")
