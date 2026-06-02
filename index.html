@@ -26,18 +26,16 @@
     informative.
   </p>
   <p class="lede">
-    Our fitness here is an NCA analogue of that idea. The
-    <code>preq_length</code> term fits a small linear probe online against the
-    rollout transitions and sums the per-step MSE above the floor. That probe
-    is the <strong>bounded student</strong>: it has tiny capacity and a fixed
-    optimization budget, so its prequential loss is a stand-in for
-    "structure a limited learner can extract." We multiply it by a Gaussian
-    gate on the gzip ratio that penalizes <em>both</em> over-compressible
-    (trivial) and under-compressible (chaotic) dynamics &mdash; the same
-    "exclude time-bounded entropy" move the paper makes. Sweeping the gzip
-    target along that band moves the operating point on the
-    "rich but learnable" axis. Below: six runs that share everything except
-    the target compressibility of the rollout.
+    Our fitness uses a small online linear probe (the <strong>bounded
+    student</strong>) as the observer. On its own, probe loss is easy to
+    game: NCAs that collapse to a static or near-uniform field also have
+    low probe loss, so evolution keeps rediscovering trivial fixed points.
+    The gzip band exists to <em>filter those out</em> &mdash; we multiply
+    the probe term by a Gaussian on the gzip ratio of the rollout, which
+    drives fitness to zero on highly compressible (collapsed) rollouts and
+    also pushes back on incompressible noise. Sweeping the target across
+    the band shows which complexity setting actually keeps the search
+    away from the easy attractors.
   </p>
 </header>
 
