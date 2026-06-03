@@ -176,32 +176,41 @@ h3 {
   border-top: 1px solid var(--border);
 }
 
-.plot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 18px;
+.card-plot {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
 }
 
-.plot-grid figure {
-  margin: 0;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.plot-grid figcaption {
+.card-plot > summary {
+  cursor: pointer;
   color: var(--muted);
   font-size: 13px;
-  margin-bottom: 8px;
-  font-variant-numeric: tabular-nums;
+  list-style: none;
+  user-select: none;
+  padding: 2px 0;
 }
 
-.plot-grid img {
+.card-plot > summary::-webkit-details-marker { display: none; }
+
+.card-plot > summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 1em;
+  transition: transform 0.15s ease;
+  color: var(--accent);
+}
+
+.card-plot[open] > summary::before { transform: rotate(90deg); }
+
+.card-plot > summary:hover { color: var(--fg); }
+
+.card-plot > img {
   width: 100%;
   height: auto;
   border-radius: 6px;
   background: #fff;
+  margin-top: 8px;
 }
 
 footer {
