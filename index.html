@@ -36,13 +36,23 @@
 <section class="methods">
   <h2>Setup</h2>
   <ul>
-    <li>16&times;16 continuous NCA, 3 state channels, &Delta;t=0.05.</li>
+    <li>16&times;16 continuous NCA, 3 state channels, &Delta;t=0.05, 32-step
+      rollouts with circular padding and per-cell Bernoulli(0.5) update masking.</li>
+    <li><strong>Teacher NCA</strong> (the evolved rule, ~243 params):
+      <code>Conv3x3(3&rarr;4) &rarr; Conv1x1(4&rarr;16) &rarr; ReLU &rarr;
+      Conv1x1(16&rarr;3)</code>, applied as a residual update
+      <code>s<sub>t+1</sub> = clip(s<sub>t</sub> + &Delta;t &middot; mask
+      &middot; f(s<sub>t</sub>), 0, 1)</code>. Evolution mutates these weights.</li>
+    <li><strong>Linear probe</strong> (the fixed student, ~84 params): a single
+      wrap-padded <code>Conv3x3(3&rarr;3)</code> with identity init at the
+      center tap, retrained from scratch each evaluation with Adam
+      (lr=1e-2, 50 steps) to predict the next state from the current state.</li>
     <li>Fitness = <code>preq_length</code> &times; gaussian-band gate around a
       target gzip ratio: <code>exp(-(gzip - target)<sup>2</sup> / (2&middot;0.2<sup>2</sup>))</code>.</li>
-    <li><code>preq_length</code> is the prequential length: a linear probe is
-      fit on rollout transitions, and we sum the per-step MSE above the final
-      loss floor &mdash; high values mean the dynamics are not trivially
-      predictable by the probe.</li>
+    <li><code>preq_length</code> is the prequential length: the linear probe
+      above is fit on rollout transitions, and we sum the per-step MSE above
+      the final loss floor &mdash; high values mean the dynamics are not
+      trivially predictable by the probe.</li>
     <li>(&mu;+&lambda;) ES with pop=128, elite=16, &sigma;: 0.1 &rarr; ~0.005 over 600 generations.</li>
   </ul>
 </section>
@@ -86,8 +96,8 @@
         <img src="img/torch_pdrop0/target03_curve.png" alt="target 0.30 training curve" loading="lazy" />
       </details>
       <details class="card-plot">
-        <summary>probe curves</summary>
-        <img src="img/torch_pdrop0/target03_probe.png" alt="target 0.30 probe curves" loading="lazy" />
+        <summary>probe loss curves</summary>
+        <img src="img/torch_pdrop0/target03_probe.png" alt="target 0.30 probe loss curves" loading="lazy" />
       </details>
     </article>
 
@@ -107,8 +117,8 @@
         <img src="img/torch_pdrop0/target05_curve.png" alt="target 0.50 training curve" loading="lazy" />
       </details>
       <details class="card-plot">
-        <summary>probe curves</summary>
-        <img src="img/torch_pdrop0/target05_probe.png" alt="target 0.50 probe curves" loading="lazy" />
+        <summary>probe loss curves</summary>
+        <img src="img/torch_pdrop0/target05_probe.png" alt="target 0.50 probe loss curves" loading="lazy" />
       </details>
     </article>
 
@@ -128,8 +138,8 @@
         <img src="img/torch_pdrop0/target07_curve.png" alt="target 0.70 training curve" loading="lazy" />
       </details>
       <details class="card-plot">
-        <summary>probe curves</summary>
-        <img src="img/torch_pdrop0/target07_probe.png" alt="target 0.70 probe curves" loading="lazy" />
+        <summary>probe loss curves</summary>
+        <img src="img/torch_pdrop0/target07_probe.png" alt="target 0.70 probe loss curves" loading="lazy" />
       </details>
     </article>
 
@@ -149,8 +159,8 @@
         <img src="img/torch_pdrop0/target085_curve.png" alt="target 0.85 training curve" loading="lazy" />
       </details>
       <details class="card-plot">
-        <summary>probe curves</summary>
-        <img src="img/torch_pdrop0/target085_probe.png" alt="target 0.85 probe curves" loading="lazy" />
+        <summary>probe loss curves</summary>
+        <img src="img/torch_pdrop0/target085_probe.png" alt="target 0.85 probe loss curves" loading="lazy" />
       </details>
     </article>
 
@@ -170,8 +180,8 @@
         <img src="img/torch_pdrop0/target095_curve.png" alt="target 0.95 training curve" loading="lazy" />
       </details>
       <details class="card-plot">
-        <summary>probe curves</summary>
-        <img src="img/torch_pdrop0/target095_probe.png" alt="target 0.95 probe curves" loading="lazy" />
+        <summary>probe loss curves</summary>
+        <img src="img/torch_pdrop0/target095_probe.png" alt="target 0.95 probe loss curves" loading="lazy" />
       </details>
     </article>
 
@@ -191,8 +201,8 @@
         <img src="img/torch_pdrop0/target10_curve.png" alt="target 1.00 training curve" loading="lazy" />
       </details>
       <details class="card-plot">
-        <summary>probe curves</summary>
-        <img src="img/torch_pdrop0/target10_probe.png" alt="target 1.00 probe curves" loading="lazy" />
+        <summary>probe loss curves</summary>
+        <img src="img/torch_pdrop0/target10_probe.png" alt="target 1.00 probe loss curves" loading="lazy" />
       </details>
     </article>
 
