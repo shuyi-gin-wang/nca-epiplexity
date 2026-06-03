@@ -10,50 +10,6 @@
 
 * { box-sizing: border-box; }
 
-.flash-warning {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 24px;
-  background: repeating-linear-gradient(
-    45deg,
-    #ffd400 0 18px,
-    #1a1500 18px 36px
-  );
-  color: #fff8d6;
-  border-bottom: 2px solid #000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.flash-warning__icon {
-  font-size: 28px;
-  line-height: 1;
-  flex-shrink: 0;
-  background: #ffd400;
-  color: #000;
-  width: 44px;
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 2px solid #000;
-}
-
-.flash-warning__text {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 8px 14px;
-  border-radius: 6px;
-}
-
-.flash-warning__text strong { color: #ffd400; }
-
 html, body {
   margin: 0;
   padding: 0;
