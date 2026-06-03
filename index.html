@@ -35,41 +35,6 @@
   </p>
 </header>
 
-<section class="methods">
-  <h2>Setup</h2>
-  <ul>
-    <li><strong>Teacher NCA</strong> (the evolved rule, ~243 params): 16&times;16
-      grid, 3 state channels, 32-step rollout with circular padding and per-cell
-      Bernoulli(0.5) update masking. Architecture
-      <code>Conv3x3(3&rarr;4) &rarr; Conv1x1(4&rarr;16) &rarr; ReLU &rarr;
-      Conv1x1(16&rarr;3)</code>, applied as
-      <code>s<sub>t+1</sub> = clip(s<sub>t</sub> + 0.05 &middot; mask &middot;
-      f(s<sub>t</sub>), 0, 1)</code>. Evolution mutates these weights.</li>
-    <li><strong>Linear probe</strong> (the fixed student, ~84 params): a single
-      wrap-padded <code>Conv3x3(3&rarr;3)</code> with identity init at the
-      center tap, retrained from scratch each evaluation with Adam
-      (lr=1e-2, 50 steps) to predict the next state from the current state.</li>
-    <li>Fitness = <code>preq_length &times; exp(-(gzip - target)<sup>2</sup> /
-      (2&middot;0.2<sup>2</sup>))</code>, where <code>preq_length</code> sums
-      the probe&rsquo;s per-step MSE above its final loss floor over rollout
-      transitions (high = dynamics not trivially predictable by the probe).</li>
-    <li>(&mu;+&lambda;) ES with pop=128, elite=16, &sigma;: 0.1 &rarr; ~0.005 over 600 generations.</li>
-  </ul>
-</section>
-
-<section class="findings">
-  <h2>What we found</h2>
-  <ul>
-    <li>The gzip band (byte-level compression) acts as a coarse complexity
-      filter that prevents collapse to static attractors. It works well as a
-      floor complexity filter (evolutionary search around 0.3 gzip band
-      yields low-complexity oscillations) but becomes a constraint for
-      high-epiplexity search.</li>
-    <li>Low targets give stable, blocky patterns; mid targets give travelling
-      structures; high targets give shimmering, noise-like fields.</li>
-  </ul>
-</section>
-
 <section class="gallery">
   <h2>Sweep</h2>
   <p class="hint">
