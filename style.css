@@ -124,6 +124,13 @@ h3 {
   margin: 6px 0 8px;
 }
 
+.extra-inline {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+}
+
 .card .extra {
   color: var(--muted);
   font-size: 13px;

@@ -148,5 +148,211 @@
   </div>
 </section>
 
+<section class="methods">
+  <h2>Probe ladder &mdash; different students</h2>
+  <p class="hint">
+    The runs above use a fixed linear probe. Here we sweep the <em>student</em>
+    &mdash; the bounded observer whose prequential length defines the epiplexity
+    signal &mdash; across a complexity ladder, all at <code>p_drop = 0</code>
+    (no cell dropout). A heavier student can compress more structure, so a given
+    rollout looks less complex to it; the evolved NCAs differ accordingly.
+  </p>
+  <ul>
+    <li><strong>linear</strong> &mdash; single 3&times;3 conv, ~84 params. The baseline bounded observer.</li>
+    <li><strong>mlp_small</strong> &mdash; 1 hidden layer, width 8, ~251 params.</li>
+    <li><strong>mlp_wide</strong> &mdash; 1 hidden layer, width 32, ~995 params.</li>
+    <li><strong>deep_mlp</strong> &mdash; 2 hidden 3&times;3 conv layers, width 16, ~2.8k params.</li>
+    <li><strong>transformer</strong> &mdash; attention readout, width 32, ~21k params.</li>
+  </ul>
+  <p class="hint">
+    Each card: the 1000-step no-dropout rollout of the best-ever individual,
+    its final achieved gzip ratio and prequential length. The three groups are
+    the probe-training horizon modes &mdash; <em>direct</em> (one forward pass to
+    state <code>t+K</code>), <em>autoregressive</em> (probe applied <code>K</code>
+    times), and <em>multi</em> (loss summed across horizons <code>1,2,4,8,16</code>).
+  </p>
+</section>
+
+<section class="gallery">
+  <h2>Direct readout (K = 16)</h2>
+  <div class="cards">
+
+    <article class="card">
+      <h3>linear <span class="extra-inline">~84p</span></h3>
+      <img src="gifs/sweep_pdrop0/linear_direct.gif" alt="linear, direct rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.325</dd>
+        <dt>preq length</dt><dd>10.83</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/linear_direct_curve.png" alt="linear direct training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/linear_direct_probe.png" alt="linear direct probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>mlp_small <span class="extra-inline">~251p</span></h3>
+      <img src="gifs/sweep_pdrop0/mlp_small_direct.gif" alt="mlp_small, direct rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.438</dd>
+        <dt>preq length</dt><dd>8.74</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/mlp_small_direct_curve.png" alt="mlp_small direct training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/mlp_small_direct_probe.png" alt="mlp_small direct probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>mlp_wide <span class="extra-inline">~995p</span></h3>
+      <img src="gifs/sweep_pdrop0/mlp_wide_direct.gif" alt="mlp_wide, direct rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.384</dd>
+        <dt>preq length</dt><dd>5.60</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/mlp_wide_direct_curve.png" alt="mlp_wide direct training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/mlp_wide_direct_probe.png" alt="mlp_wide direct probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>deep_mlp <span class="extra-inline">~2.8kp</span></h3>
+      <img src="gifs/sweep_pdrop0/deep_mlp_direct.gif" alt="deep_mlp, direct rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.382</dd>
+        <dt>preq length</dt><dd>9.47</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/deep_mlp_direct_curve.png" alt="deep_mlp direct training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/deep_mlp_direct_probe.png" alt="deep_mlp direct probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>transformer <span class="extra-inline">~21kp</span></h3>
+      <img src="gifs/sweep_pdrop0/transformer_direct.gif" alt="transformer, direct rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.571</dd>
+        <dt>preq length</dt><dd>3.41</dd>
+        <dt>gens</dt><dd>50</dd>
+      </dl>
+      <p class="note">Fewer generations (heaviest student, slowest to evaluate).</p>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/transformer_direct_curve.png" alt="transformer direct training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/transformer_direct_probe.png" alt="transformer direct probe loss curves" loading="lazy" /></details>
+    </article>
+
+  </div>
+</section>
+
+<section class="gallery">
+  <h2>Autoregressive (K = 16)</h2>
+  <div class="cards">
+
+    <article class="card">
+      <h3>linear <span class="extra-inline">~84p</span></h3>
+      <img src="gifs/sweep_pdrop0/linear_ar.gif" alt="linear, autoregressive rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.305</dd>
+        <dt>preq length</dt><dd>2174.4</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <p class="note">Diverged: rolling the linear probe 16&times; is unstable, so the prequential length blows up.</p>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/linear_ar_curve.png" alt="linear ar training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/linear_ar_probe.png" alt="linear ar probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>mlp_small <span class="extra-inline">~251p</span></h3>
+      <img src="gifs/sweep_pdrop0/mlp_small_ar.gif" alt="mlp_small, autoregressive rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.328</dd>
+        <dt>preq length</dt><dd>7.72</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/mlp_small_ar_curve.png" alt="mlp_small ar training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/mlp_small_ar_probe.png" alt="mlp_small ar probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>mlp_wide <span class="extra-inline">~995p</span></h3>
+      <img src="gifs/sweep_pdrop0/mlp_wide_ar.gif" alt="mlp_wide, autoregressive rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.370</dd>
+        <dt>preq length</dt><dd>9.32</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/mlp_wide_ar_curve.png" alt="mlp_wide ar training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/mlp_wide_ar_probe.png" alt="mlp_wide ar probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>deep_mlp <span class="extra-inline">~2.8kp</span></h3>
+      <img src="gifs/sweep_pdrop0/deep_mlp_ar.gif" alt="deep_mlp, autoregressive rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.443</dd>
+        <dt>preq length</dt><dd>7.30</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <p class="note">Population 64 (heavier student, halved for cost).</p>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/deep_mlp_ar_curve.png" alt="deep_mlp ar training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/deep_mlp_ar_probe.png" alt="deep_mlp ar probe loss curves" loading="lazy" /></details>
+    </article>
+
+  </div>
+</section>
+
+<section class="gallery">
+  <h2>Multi-horizon (K = 1,2,4,8,16)</h2>
+  <div class="cards">
+
+    <article class="card">
+      <h3>linear <span class="extra-inline">~84p</span></h3>
+      <img src="gifs/sweep_pdrop0/linear_multi.gif" alt="linear, multi-horizon rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.306</dd>
+        <dt>preq length</dt><dd>454.3</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <p class="note">Diverged: long-horizon autoregressive rollout of the linear probe is unstable.</p>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/linear_multi_curve.png" alt="linear multi training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/linear_multi_probe.png" alt="linear multi probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>mlp_small <span class="extra-inline">~251p</span></h3>
+      <img src="gifs/sweep_pdrop0/mlp_small_multi.gif" alt="mlp_small, multi-horizon rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.323</dd>
+        <dt>preq length</dt><dd>8.15</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/mlp_small_multi_curve.png" alt="mlp_small multi training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/mlp_small_multi_probe.png" alt="mlp_small multi probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>mlp_wide <span class="extra-inline">~995p</span></h3>
+      <img src="gifs/sweep_pdrop0/mlp_wide_multi.gif" alt="mlp_wide, multi-horizon rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.339</dd>
+        <dt>preq length</dt><dd>11.18</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/mlp_wide_multi_curve.png" alt="mlp_wide multi training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/mlp_wide_multi_probe.png" alt="mlp_wide multi probe loss curves" loading="lazy" /></details>
+    </article>
+
+    <article class="card">
+      <h3>deep_mlp <span class="extra-inline">~2.8kp</span></h3>
+      <img src="gifs/sweep_pdrop0/deep_mlp_multi.gif" alt="deep_mlp, multi-horizon rollout" loading="lazy" />
+      <dl>
+        <dt>final gzip</dt><dd>0.305</dd>
+        <dt>preq length</dt><dd>7.03</dd>
+        <dt>gens</dt><dd>200</dd>
+      </dl>
+      <details class="card-plot"><summary>training curve</summary><img src="img/sweep_pdrop0/deep_mlp_multi_curve.png" alt="deep_mlp multi training curve" loading="lazy" /></details>
+      <details class="card-plot"><summary>probe loss curves</summary><img src="img/sweep_pdrop0/deep_mlp_multi_probe.png" alt="deep_mlp multi probe loss curves" loading="lazy" /></details>
+    </article>
+
+  </div>
+</section>
+
 </body>
 </html>
