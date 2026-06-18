@@ -178,3 +178,14 @@ data/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# NCA experiment output artifacts (large rollout GIFs + sweep output dirs).
+# Keeps git history lean; existing tracked PNGs/TSVs are unaffected.
+scripts/demo_out/sweep_*/
+scripts/demo_out/pdrop0_long_target*/
+scripts/demo_out/evolve_gzip_gate0p3_torch/
+scripts/demo_out/smoke/
+scripts/demo_out/runs/mlp/
+scripts/demo_out/**/long_trajectory_*.gif
+scripts/demo_out/runs/sweep_summary*.tsv
+scripts/demo_out/runs/pdrop0_long_summary.tsv
