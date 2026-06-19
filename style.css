@@ -107,6 +107,65 @@ h3 {
   image-rendering: pixelated;
 }
 
+.player {
+  position: relative;
+  line-height: 0;
+}
+
+/* Frozen-frame canvas shown while paused (drawn over the live GIF). */
+.freeze {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  image-rendering: pixelated;
+  display: none;
+}
+
+.player.paused .freeze { display: block; }
+
+.player-ctrls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.player:hover .player-ctrls,
+.player-ctrls:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .player-ctrls { opacity: 1; }
+}
+
+.player-ctrls button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(15, 17, 21, 0.72);
+  color: var(--fg);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.player-ctrls button:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
 .card dl {
   display: grid;
   grid-template-columns: max-content auto;
@@ -174,6 +233,32 @@ h3 {
   border-radius: 6px;
   background: #fff;
   margin-top: 8px;
+}
+
+.chrow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chcol { margin: 0; }
+
+.chcol img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: #000;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.chcol figcaption {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 footer {
