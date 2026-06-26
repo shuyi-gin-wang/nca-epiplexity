@@ -18,6 +18,8 @@ html, body {
   font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+body.lightbox-open { overflow: hidden; }
+
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
@@ -88,6 +90,11 @@ h3 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
+}
+@media (min-width: 1040px) {
+  .cards.four-card-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .card {
@@ -226,6 +233,135 @@ h3 {
 .card-plot[open] > summary::before { transform: rotate(90deg); }
 
 .card-plot > summary:hover { color: var(--fg); }
+.card-plot.enlargeable > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plot-expand-btn {
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(15, 17, 21, 0.72);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.plot-expand-btn:hover,
+.plot-expand-btn:focus-visible {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  outline: none;
+}
+
+.plot-expand-btn svg {
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.card-plot.enlargeable > img {
+  cursor: zoom-in;
+  image-rendering: auto;
+}
+
+.plot-lightbox[hidden] { display: none; }
+
+.plot-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.plot-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 8, 12, 0.86);
+  backdrop-filter: blur(3px);
+}
+
+.plot-lightbox-panel {
+  position: relative;
+  width: min(1400px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+}
+
+.plot-lightbox-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plot-lightbox-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plot-lightbox-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(15, 17, 21, 0.72);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plot-lightbox-close:hover,
+.plot-lightbox-close:focus-visible {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  outline: none;
+}
+
+.plot-lightbox-stage {
+  overflow: auto;
+  padding: 12px;
+  background: #0b0d11;
+}
+
+.plot-lightbox-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  background: #fff;
+  image-rendering: auto;
+}
 
 .card-plot > img {
   width: 100%;

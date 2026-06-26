@@ -353,7 +353,7 @@
 
 <section class="gallery">
   <h2>Autoregressive (K = 16)</h2>
-  <div class="cards">
+  <div class="cards four-card-row">
 
     <article class="card">
       <h3>linear <span class="extra-inline">~84p</span></h3>
@@ -450,7 +450,7 @@
 
 <section class="gallery">
   <h2>Multi-horizon (K = 1,2,4,8,16)</h2>
-  <div class="cards">
+  <div class="cards four-card-row">
 
     <article class="card">
       <h3>linear <span class="extra-inline">~84p</span></h3>
@@ -544,8 +544,24 @@
   </div>
 </section>
 
+<div class="plot-lightbox" id="plot-lightbox" hidden role="dialog" aria-modal="true" aria-labelledby="plot-lightbox-title">
+  <div class="plot-lightbox-backdrop" data-close-plot></div>
+  <div class="plot-lightbox-panel">
+    <div class="plot-lightbox-topbar">
+      <div class="plot-lightbox-title" id="plot-lightbox-title"></div>
+      <button class="plot-lightbox-close" type="button" data-close-plot aria-label="Close expanded plot">&times;</button>
+    </div>
+    <div class="plot-lightbox-stage">
+      <img id="plot-lightbox-img" alt="" />
+    </div>
+  </div>
+</div>
 <script>
   var PAUSE = "&#9208;", PLAY = "&#9654;";
+  var plotLightbox = document.getElementById("plot-lightbox");
+  var plotLightboxTitle = document.getElementById("plot-lightbox-title");
+  var plotLightboxImg = document.getElementById("plot-lightbox-img");
+  var lastPlotTrigger = null;
 
   function ensureCanvas(player, img) {
     var c = player.querySelector("canvas.freeze");
@@ -599,11 +615,81 @@
     }
   }
 
+
+  function plotTitleFor(img) {
+    var card = img.closest(".card");
+    var cardTitle = card ? card.querySelector("h3") : null;
+    var details = img.closest(".card-plot");
+    var summary = details ? details.querySelector("summary") : null;
+    var parts = [];
+    if (cardTitle) parts.push(cardTitle.textContent.replace(/\s+/g, " ").trim());
+    if (summary) parts.push(summary.childNodes[0].textContent.replace(/\s+/g, " ").trim());
+    return parts.join(" - ");
+  }
+
+  function openPlotLightbox(img, trigger) {
+    lastPlotTrigger = trigger || null;
+    plotLightboxTitle.textContent = plotTitleFor(img);
+    plotLightboxImg.src = img.currentSrc || img.src;
+    plotLightboxImg.alt = img.alt || plotLightboxTitle.textContent;
+    plotLightbox.hidden = false;
+    document.body.classList.add("lightbox-open");
+    plotLightbox.querySelector(".plot-lightbox-close").focus();
+  }
+
+  function closePlotLightbox() {
+    if (plotLightbox.hidden) return;
+    plotLightbox.hidden = true;
+    plotLightboxImg.removeAttribute("src");
+    document.body.classList.remove("lightbox-open");
+    if (lastPlotTrigger) lastPlotTrigger.focus();
+  }
+
+  function setupPlotExpanders() {
+    document.querySelectorAll(".card-plot").forEach(function (details) {
+      var summary = details.querySelector("summary");
+      var img = details.querySelector("img");
+      if (!summary || !img) return;
+      var label = summary.textContent.toLowerCase();
+      if (label.indexOf("training curve") < 0 && label.indexOf("probe loss") < 0) return;
+
+      details.classList.add("enlargeable");
+      var btn = document.createElement("button");
+      btn.className = "plot-expand-btn";
+      btn.type = "button";
+      btn.title = "Open full size";
+      btn.setAttribute("aria-label", "Open " + summary.textContent.trim() + " full size");
+      btn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      summary.appendChild(btn);
+    });
+  }
+
+  setupPlotExpanders();
   document.addEventListener("click", function (e) {
+    var expandBtn = e.target.closest(".plot-expand-btn");
+    if (expandBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      openPlotLightbox(expandBtn.closest(".card-plot").querySelector("img"), expandBtn);
+      return;
+    }
+    var plotImg = e.target.closest(".card-plot.enlargeable > img");
+    if (plotImg) {
+      openPlotLightbox(plotImg, plotImg);
+      return;
+    }
+    if (e.target.closest("[data-close-plot]")) {
+      closePlotLightbox();
+      return;
+    }
     var rbtn = e.target.closest(".replay-btn");
     if (rbtn) { handleReplay(rbtn); return; }
     var pbtn = e.target.closest(".pause-btn");
     if (pbtn) { handlePause(pbtn); return; }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closePlotLightbox();
   });
 </script>
 
