@@ -184,6 +184,13 @@ h3 {
 .card dt { color: var(--muted); }
 .card dd { margin: 0; font-variant-numeric: tabular-nums; }
 
+
+.probe-desc {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: -6px 0 12px;
+}
 .card .note {
   color: var(--fg);
   font-size: 14px;
