@@ -185,11 +185,36 @@ h3 {
 .card dd { margin: 0; font-variant-numeric: tabular-nums; }
 
 
+.probe-info {
+  margin: -6px 0 12px;
+}
+
+.probe-info > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  list-style: none;
+  user-select: none;
+}
+
+.probe-info > summary::-webkit-details-marker { display: none; }
+
+.probe-info > summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 1em;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+.probe-info[open] > summary::before { transform: rotate(90deg); }
+.probe-info > summary:hover { color: var(--fg); }
+
 .probe-desc {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
-  margin: -6px 0 12px;
+  margin: 6px 0 0;
 }
 .card .note {
   color: var(--fg);
