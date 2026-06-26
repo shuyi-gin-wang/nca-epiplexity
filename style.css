@@ -371,31 +371,6 @@ h3 {
   margin-top: 8px;
 }
 
-.chrow {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.chcol { margin: 0; }
-
-.chcol img {
-  width: 100%;
-  height: auto;
-  border-radius: 4px;
-  background: #000;
-  image-rendering: pixelated;
-  display: block;
-}
-
-.chcol figcaption {
-  text-align: center;
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-}
 
 footer {
   color: var(--muted);
