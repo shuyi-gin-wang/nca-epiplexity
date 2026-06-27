@@ -185,20 +185,19 @@
 </section>
 
 <section class="methods">
-  <h2>Probe ladder &mdash; different students</h2>
+  <h2>Probe ladder: different students</h2>
   <p class="hint">
-    The runs above use a fixed linear probe. Here we sweep the <em>student</em>
-    &mdash; the bounded observer whose prequential length defines the epiplexity
-    signal &mdash; across a complexity ladder, all at <code>p_drop = 0</code>
-    (no cell dropout). A heavier student can compress more structure, so a given
-    rollout looks less complex to it; the evolved NCAs differ accordingly.
+    Here we vary the <em>student</em> probe that acts as the bounded observer for
+    the epiplexity signal. Larger students can learn more structure from the same
+    rollout, so the same NCA can appear less complex to them. This sweep shows
+    how evolved dynamics change as observer capacity increases.
   </p>
   <p class="hint">
-    Each card: the 1000-step no-dropout rollout of the best-ever individual,
-    its final achieved gzip ratio and prequential length. The three groups are
-    the probe-training horizon modes &mdash; <em>direct</em> (one forward pass to
-    state <code>t+K</code>), <em>autoregressive</em> (probe applied <code>K</code>
-    times), and <em>multi</em> (loss summed across horizons <code>1,2,4,8,16</code>).
+    Each card shows the 1000 step rollout from the best ever individual, along
+    with its final gzip ratio and prequential length. The groups compare three
+    probe training objectives: <em>direct</em> prediction of state <code>t + K</code>,
+    <em>autoregressive</em> prediction by applying the probe <code>K</code> times,
+    and <em>multi</em> horizon prediction across steps <code>1, 2, 4, 8, 16</code>.
   </p>
 </section>
 
