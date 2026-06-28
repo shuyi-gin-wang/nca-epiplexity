@@ -182,9 +182,14 @@ data/
 # NCA experiment output artifacts (large rollout GIFs + sweep output dirs).
 # Keeps git history lean; existing tracked PNGs/TSVs are unaffected.
 scripts/demo_out/sweep_*/
+scripts/demo_out/epx_*/
+scripts/demo_out/epiplexity_*/
 scripts/demo_out/pdrop0_long_target*/
+scripts/demo_out/evolve_largepop_torch/
 scripts/demo_out/evolve_gzip_gate0p3_torch/
-scripts/demo_out/smoke/
+scripts/demo_out/runs/epiplexity/
+scripts/demo_out/runs/sweeps/
+scripts/demo_out/runs/pdrop0_long/
 scripts/demo_out/runs/mlp/
 scripts/demo_out/**/long_trajectory_*.gif
 scripts/demo_out/runs/sweep_summary*.tsv

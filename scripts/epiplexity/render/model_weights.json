@@ -1,0 +1,45 @@
+{
+    "note":  "Edit this file to control the NCA model dropdown. Set enabled=false to hide a model. Order is preserved.",
+    "models":  [
+                   {
+                       "label":  "probes_ensemble_direct_K16",
+                       "path":  "downloaded_runs/epx_observer_balanced_hmean_gain015_directK16_floor03_g1500_h100/preview_gen00300_bestever/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "transformer_direct_K16",
+                       "path":  "downloaded_runs/epx_transformer_direct_K16_pdrop0_floor03_grid32_g1500/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "transformer_direct_K64",
+                       "path":  "downloaded_runs/epx_transformer_direct_K64_pdrop0_floor035_grid32_r128_pop16_g1500/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "deeper_mlp_autoregressive_K16",
+                       "path":  "scripts/demo_out/sweep_deep_mlp_autoregressive_K16_pdrop0/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "deeper_mlp_direct_K16",
+                       "path":  "scripts/demo_out/sweep_deep_mlp_direct_K16_pdrop0/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "mlp_small_autoregressive_K16",
+                       "path":  "scripts/demo_out/sweep_mlp_small_autoregressive_K16_pdrop0/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "mlp_small_direct_K8",
+                       "path":  "scripts/demo_out/sweep_mlp_small_direct_K8/best_ever_params.pt",
+                       "enabled":  true
+                   },
+                   {
+                       "label":  "mlp_wide_direct_K16",
+                       "path":  "scripts/demo_out/sweep_mlp_wide_direct_K16_pdrop0/best_ever_params.pt",
+                       "enabled":  true
+                   }
+               ]
+}

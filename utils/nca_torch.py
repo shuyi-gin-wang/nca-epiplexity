@@ -8,7 +8,8 @@ Mirrors:
        -> train_probe_preq_continuous
 
 Differences:
-  - Runs on torch.cuda when available (otherwise CPU).
+  - CUDA is the default execution target for training scripts. CPU runs are
+    explicit quick-check/debug opt-ins.
   - Prequential gain normalization fixed: divides by (initial_loss - floor) * probe_steps,
     so the score is bounded in [0,1] and means "fraction of the early-vs-floor gap
     actually integrated" rather than "fraction of variance" (which had no [0,1] bound
@@ -25,6 +26,54 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+def resolve_torch_device(device: str = "cuda", allow_cpu: bool = False) -> torch.device:
+    """Resolve a torch device with CUDA required by default.
+
+    Parameters
+    ----------
+    device:
+        Device string. Use "cuda" or "cuda:N" for real training. "auto" means
+        CUDA when available, otherwise CPU only if allow_cpu=True.
+    allow_cpu:
+        Permit CPU execution for short checks and local debugging.
+    """
+    requested = str(device)
+    if requested == "auto":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if allow_cpu:
+            return torch.device("cpu")
+        raise RuntimeError(
+            "CUDA is required for epiplexity training, but torch.cuda.is_available() is false. "
+            "Install a CUDA-enabled PyTorch build or rerun with --device cpu --allow-cpu for a short check."
+        )
+
+    resolved = torch.device(requested)
+    if resolved.type == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                f"Requested {requested}, but CUDA is not available in this PyTorch runtime. "
+                "Install a CUDA-enabled PyTorch build or use --device cpu --allow-cpu only for short checks."
+            )
+        if resolved.index is not None and resolved.index >= torch.cuda.device_count():
+            raise RuntimeError(
+                f"Requested {requested}, but only {torch.cuda.device_count()} CUDA device(s) are visible."
+            )
+        return resolved
+
+    if resolved.type == "cpu" and not allow_cpu:
+        raise RuntimeError("CPU execution is disabled by default. Pass --allow-cpu for short/debug runs.")
+
+    return resolved
+
+
+def describe_torch_device(device: torch.device) -> str:
+    if device.type == "cuda":
+        index = 0 if device.index is None else device.index
+        return f"{device} ({torch.cuda.get_device_name(index)})"
+    return str(device)
 
 
 def _wrap_pad(x: torch.Tensor, pad: int = 1) -> torch.Tensor:
@@ -81,7 +130,7 @@ class NCAContinuousTorch:
     d_state: int = 3
     p_drop: float = 0.5
     dt: float = 0.01
-    device: torch.device = torch.device("cpu")
+    device: torch.device = torch.device("cuda")
 
     def sample_net(self, rule_seed: int) -> NCANetworkTorch:
         rng = torch.Generator(device=self.device).manual_seed(int(rule_seed))

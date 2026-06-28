@@ -139,7 +139,11 @@ def transformer_fwd(params, x):
     head_dim = H // n_heads
     L = Hg * Wg
 
-    h = F.conv2d(x, we, be) + pos_grid  # (N, H, Hg, Wg)
+    if pos_grid.shape[-2:] != (Hg, Wg):
+        pos = F.interpolate(pos_grid, size=(Hg, Wg), mode="bilinear", align_corners=False)
+    else:
+        pos = pos_grid
+    h = F.conv2d(x, we, be) + pos  # (N, H, Hg, Wg)
 
     # self-attention (pre-norm)
     hn = _layernorm_chw(h, ln1_g, ln1_b)
@@ -199,7 +203,7 @@ def probe_param_count(arch: str, d_state: int, hidden: int) -> int:
     if arch == "transformer":
         return (
             h * d_state + h            # embed
-            + h * 16 * 16              # pos
+            + h * 16 * 16              # learned pos grid, resized at runtime when needed
             + 3 * h * h + 3 * h        # qkv
             + h * h + h                # proj
             + 4 * h * h + 4 * h        # ffn1

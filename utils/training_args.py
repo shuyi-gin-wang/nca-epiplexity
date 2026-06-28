@@ -54,9 +54,15 @@ class BaseTrainingArgs:
             "autocast cannot be enabled if mixed_precision is none"
 
     def to_device(self):
-        """Convert device string to torch.device"""
+        """Convert device string to torch.device without silently falling back."""
         if isinstance(self.device, str):
-            self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
+            requested = torch.device(self.device)
+            if requested.type == "cuda" and not torch.cuda.is_available():
+                raise RuntimeError(
+                    f"Requested {self.device}, but CUDA is not available in this PyTorch runtime. "
+                    "Install a CUDA-enabled PyTorch build or explicitly pass --device cpu for a short CPU check."
+                )
+            self.device = requested
         return self.device
 
     def set_runtime_paths(self):

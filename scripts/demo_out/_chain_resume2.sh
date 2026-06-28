@@ -17,7 +17,7 @@ if [ ! -f "$SEED1" ]; then
 fi
 echo "[chain] launching resume2 from $SEED1 ($(date))"
 
-.venv/Scripts/python.exe scripts/evolve_nca_preq_gzip_continuous_torch.py \
+.venv/Scripts/python.exe scripts/epiplexity/trainers/evolve_gzip.py \
   --run-name sweep_transformer_direct_K16_pdrop0_resume2 \
   --resume-from "$SEED1" \
   --p-drop 0.0 \
