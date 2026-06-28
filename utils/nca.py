@@ -4,11 +4,13 @@ from flax.core import freeze, unfreeze
 
 import jax.lax as lax
 import jax.numpy as jnp
+import optax
 from einops import rearrange, reduce, repeat
 from jax.random import split
 
 import io
 import gzip
+from functools import partial
 from typing import Callable
 
 import matplotlib.colors as mcolors
@@ -206,6 +208,167 @@ class NCA():
         return img
 
 #############################################################
+#  Continuous NCA (ASAL-style: stochastic-ODE on [0,1]^D)
+#############################################################
+
+"""
+Continuous NCA substrate, matching SakanaAI/asal/substrates/nca.py.
+State is a continuous tensor in [0,1]^D updated by a forward-Euler step of a
+learned vector field, with per-cell Bernoulli dropout on the update mask.
+"""
+class NCAContinuous():
+    def __init__(self, grid_size=128, d_state=3, p_drop=0.5, dt=0.01):
+        self.grid_size = grid_size
+        self.d_state = d_state
+        self.p_drop = p_drop
+        self.dt = dt
+        self.nca = NCANetwork(d_state=d_state)
+
+    def default_params(self, rng):
+        rng, _rng = split(rng)
+        net_params = self.nca.init(
+            _rng, jnp.zeros((self.grid_size, self.grid_size, self.d_state))
+        )
+        return dict(net_params=net_params)
+
+    def init_state(self, rng, params):
+        return jax.random.uniform(
+            rng, (self.grid_size, self.grid_size, self.d_state), minval=0., maxval=1.
+        )
+
+    def step_state(self, rng, state, params):
+        dstate = self.nca.apply(params['net_params'], state)
+        mask = 1. - jnp.floor(
+            jax.random.uniform(rng, state.shape[:2], minval=0., maxval=1.) + self.p_drop
+        )
+        dstate = dstate * mask[..., None]
+        state = state + dstate * self.dt
+        return jnp.clip(state, 0., 1.)
+
+    def render_state(self, state, params, img_size=None):
+        assert self.d_state in (1, 3), "render_state expects d_state in {1, 3}"
+        if self.d_state == 1:
+            zeros = jnp.zeros_like(state)
+            img = jnp.concatenate([state, zeros, zeros], axis=-1)
+        else:
+            img = state
+        if img_size is not None:
+            img = jax.image.resize(img, (img_size, img_size, 3), method='nearest')
+        return img
+
+
+def _generate_rule_rollouts_continuous(
+    seeds, grid, d_state, p_drop, dt,
+    rollout_steps, n_ic, start_step, ic_rng_seed,
+):
+    """Continuous-NCA analogue of _generate_rule_rollouts. Returns (B, n_ic, T, H, W, D)."""
+    B = seeds.shape[0]
+    rule_seeds_tiled = jnp.tile(seeds, (n_ic, 1))
+    ic_rng = jax.random.PRNGKey(ic_rng_seed)
+    ic_seeds = split(ic_rng, n_ic * B)
+
+    generator = NCAContinuous(grid_size=grid, d_state=d_state, p_drop=p_drop, dt=dt)
+
+    def rollout_fn(ic_rng_one, rule_seed_one):
+        params = generator.default_params(rule_seed_one)
+        return rollout_simulation(
+            ic_rng_one, params, substrate=generator,
+            rollout_steps=rollout_steps, k_steps=1, time_sampling='video',
+            start_step=start_step,
+        )
+
+    sims = jax.vmap(rollout_fn, in_axes=(0, 0))(ic_seeds, rule_seeds_tiled)
+    return rearrange(sims, "(I B) T H W D -> B I T H W D", B=B, I=n_ic)
+
+
+def _train_probe_one_rule_preq_continuous(rng, rollouts, d_state, probe_steps, lr):
+    """
+    Autoregressive (k=1) continuous probe. MSE loss against variance baseline.
+    rollouts: (n_ic, T, H, W, D) in [0,1].
+    Returns (preq_gain, preq_length, mse_floor, baseline).
+    """
+    T = rollouts.shape[1]
+    x = rollouts[:, :T - 1]
+    y = rollouts[:, 1:]
+
+    x_flat = rearrange(x, "I T H W D -> (I T) H W D")
+    y_flat = rearrange(y, "I T H W D -> (I T) H W D")
+
+    probe = _ProbeConv(d_total=d_state)
+    rng_init, _ = split(rng)
+    params = probe.init(rng_init, x_flat[0])
+
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(params)
+
+    def forward(p, batch):
+        return jax.vmap(probe.apply, in_axes=(None, 0))(p, batch)
+
+    def loss_fn(p):
+        pred = forward(p, x_flat)
+        return jnp.mean((pred - y_flat) ** 2)
+
+    def step(carry, _):
+        params, opt_state = carry
+        loss, grads = jax.value_and_grad(loss_fn)(params)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    (params, _), losses = lax.scan(step, (params, opt_state), None, length=probe_steps)
+    mse_floor = losses[-1]
+
+    # marginal baseline: predict the per-channel mean of y -> baseline MSE = variance
+    mean_y = y_flat.mean(axis=(0, 1, 2), keepdims=True)
+    baseline = jnp.mean((y_flat - mean_y) ** 2)
+
+    preq_length = jnp.sum(jnp.maximum(losses - mse_floor, 0.0))
+    preq_gain = jnp.maximum(
+        0.0, preq_length / jnp.maximum(baseline * probe_steps, 1e-10)
+    )
+    return preq_gain, preq_length, mse_floor, baseline
+
+
+def _train_probes_from_rollouts_preq_continuous(sims, d_state, probe_steps, lr, probe_rng_seed):
+    B = sims.shape[0]
+    probe_rngs = split(jax.random.PRNGKey(probe_rng_seed), B)
+    train_one = partial(
+        _train_probe_one_rule_preq_continuous,
+        d_state=d_state, probe_steps=probe_steps, lr=lr,
+    )
+    return jax.jit(jax.vmap(train_one))(probe_rngs, sims)
+
+
+def compute_rule_probe_preq_continuous_batch(
+    seeds: jnp.ndarray,
+    grid: int = 128,
+    d_state: int = 3,
+    p_drop: float = 0.5,
+    dt: float = 0.01,
+    n_ic: int = 2,
+    rollout_steps: int = 64,
+    start_step: int = 0,
+    probe_steps: int = 200,
+    lr: float = 1e-2,
+    probe_rng_seed: int = 0,
+):
+    """
+    Continuous-NCA prequential probe. Mirrors compute_rule_probe_preq_batch but:
+      - state is continuous in [0,1]^D (no one-hot)
+      - probe trained with MSE
+      - baseline is per-channel variance of y (MSE of predicting the marginal mean)
+    Default config matches ASAL nca_d3: grid=128, d_state=3, p_drop=0.5, dt=0.01.
+    """
+    sims = _generate_rule_rollouts_continuous(
+        seeds, grid, d_state, p_drop, dt,
+        rollout_steps, n_ic, start_step, ic_rng_seed=probe_rng_seed + 1,
+    )
+    return _train_probes_from_rollouts_preq_continuous(
+        sims, d_state, probe_steps, lr, probe_rng_seed,
+    )
+
+
+#############################################################
 #  NCA Dataset Generation
 #############################################################
 
@@ -345,3 +508,324 @@ def gzip_complexity(byte_data: bytes):
     compressed_size = len(buf.getvalue())
     original_size = len(byte_data)
     return compressed_size / original_size
+
+
+#############################################################
+#  Probe-based "reducible structure" score
+#
+#  Filter B for epiplexity: train a tiny linear probe to predict
+#  s_{t+k} from s_t on each rule's rollouts (with multiple ICs).
+#  The score = 1 - probe_loss / marginal_baseline_loss is the
+#  fraction of marginal entropy the probe can explain.
+#
+#  - High gzip + high probe-gain  -> class IV (reducible structure)
+#  - High gzip + low  probe-gain  -> class III (chaos / noise)
+#  - Low  gzip + high probe-gain  -> class II  (ordered / periodic)
+#  - Low  gzip + low  probe-gain  -> class I   (fixed point)
+#############################################################
+
+
+class _ProbeConv(nn.Module):
+    """Single Conv3x3 -> logits. Strictly weaker than NCANetwork."""
+    d_total: int
+    @nn.compact
+    def __call__(self, x):
+        x = jnp.pad(x, pad_width=((1, 1), (1, 1), (0, 0)), mode='wrap')
+        x = nn.Conv(features=self.d_total, kernel_size=(3, 3), padding='VALID')(x)
+        return x
+
+
+def _train_probe_one_rule(rng, rollouts, d_state, n_groups, k, probe_steps, lr):
+    """
+    rollouts: (n_ic, T, H, W, G) integer states
+    Returns (probe_gain, final_loss, baseline_loss).
+    """
+    d_total = d_state * n_groups
+    T = rollouts.shape[1]
+
+    x = rollouts[:, :T - k]   # (n_ic, T-k, H, W, G)
+    y = rollouts[:, k:]       # (n_ic, T-k, H, W, G)
+
+    x_oh = jax.nn.one_hot(x, d_state)
+    x_oh = rearrange(x_oh, "I T H W G D -> (I T) H W (G D)")
+    y_flat = rearrange(y, "I T H W G -> (I T) H W G")
+
+    probe = _ProbeConv(d_total=d_total)
+    rng_init, _ = split(rng)
+    params = probe.init(rng_init, x_oh[0])
+
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(params)
+
+    def forward(p, batch):
+        logits = jax.vmap(probe.apply, in_axes=(None, 0))(p, batch)
+        return rearrange(logits, "N H W (G D) -> N H W G D", G=n_groups)
+
+    def loss_fn(p):
+        logits = forward(p, x_oh)
+        return optax.softmax_cross_entropy_with_integer_labels(logits, y_flat).mean()
+
+    def step(carry, _):
+        params, opt_state = carry
+        loss, grads = jax.value_and_grad(loss_fn)(params)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    (params, _), losses = lax.scan(step, (params, opt_state), None, length=probe_steps)
+    final_loss = losses[-1]
+
+    # marginal baseline: cross-entropy of predicting the per-rule color histogram of y
+    y_oh = jax.nn.one_hot(y_flat.reshape(-1), d_state)
+    counts = y_oh.sum(axis=0)
+    p_marg = counts / jnp.maximum(counts.sum(), 1.0)
+    baseline = -jnp.sum(p_marg * jnp.log(p_marg + 1e-10))
+
+    gain = jnp.maximum(0.0, 1.0 - final_loss / jnp.maximum(baseline, 1e-10))
+    return gain, final_loss, baseline
+
+
+def _generate_rule_rollouts(
+    seeds, grid, d_state, n_groups, identity_bias, temperature,
+    rollout_steps, n_ic, start_step, ic_rng_seed,
+):
+    """
+    Roll out n_ic trajectories per rule from different ICs.
+    Returns sims of shape (B, n_ic, T, H, W, G).
+    """
+    B = seeds.shape[0]
+    rule_seeds_tiled = jnp.tile(seeds, (n_ic, 1))
+    ic_rng = jax.random.PRNGKey(ic_rng_seed)
+    ic_seeds = split(ic_rng, n_ic * B)
+
+    generator = NCA(
+        grid_size=grid, d_state=d_state, n_groups=n_groups,
+        identity_bias=identity_bias, temperature=temperature,
+    )
+
+    def rollout_fn(ic_rng_one, rule_seed_one):
+        params = generator.default_params(rule_seed_one)
+        return rollout_simulation(
+            ic_rng_one, params, substrate=generator,
+            rollout_steps=rollout_steps, k_steps=1, time_sampling='video',
+            start_step=start_step,
+        )
+
+    sims = jax.vmap(rollout_fn, in_axes=(0, 0))(ic_seeds, rule_seeds_tiled)
+    return rearrange(sims, "(I B) T H W G -> B I T H W G", B=B, I=n_ic)
+
+
+def _train_probes_from_rollouts(sims, d_state, n_groups, k, probe_steps, lr, probe_rng_seed):
+    """sims: (B, n_ic, T, H, W, G). Trains one probe per rule, vmapped."""
+    B = sims.shape[0]
+    probe_rngs = split(jax.random.PRNGKey(probe_rng_seed), B)
+    train_one = partial(
+        _train_probe_one_rule,
+        d_state=d_state, n_groups=n_groups, k=k,
+        probe_steps=probe_steps, lr=lr,
+    )
+    return jax.jit(jax.vmap(train_one))(probe_rngs, sims)
+
+
+def compute_rule_probe_batch(
+    seeds: jnp.ndarray,
+    grid: int = 12,
+    d_state: int = 10,
+    n_groups: int = 1,
+    identity_bias: float = 0.,
+    temperature: float = 1e-4,
+    k: int = 8,
+    n_ic: int = 4,
+    rollout_steps: int = 24,
+    start_step: int = 0,
+    probe_steps: int = 200,
+    lr: float = 1e-2,
+    probe_rng_seed: int = 0,
+):
+    """
+    For each candidate rule:
+      1. Roll out n_ic trajectories of length `rollout_steps` from different ICs.
+      2. Train a tiny Conv3x3 probe to predict s_{t+k} from s_t.
+      3. Return probe_gain = 1 - probe_loss / marginal_baseline_loss.
+
+    Returns
+    -------
+    gain : (B,)        probe gain in [0, 1]
+    final_loss : (B,)  raw probe cross-entropy at last step
+    baseline   : (B,)  marginal cross-entropy baseline
+    """
+    assert rollout_steps > k, f"need rollout_steps ({rollout_steps}) > k ({k})"
+    sims = _generate_rule_rollouts(
+        seeds, grid, d_state, n_groups, identity_bias, temperature,
+        rollout_steps, n_ic, start_step, ic_rng_seed=probe_rng_seed + 1,
+    )
+    return _train_probes_from_rollouts(
+        sims, d_state, n_groups, k, probe_steps, lr, probe_rng_seed,
+    )
+
+
+def compute_rule_probe_sweep_batch(
+    seeds: jnp.ndarray,
+    ks=(1, 2, 4, 8, 16),
+    grid: int = 12,
+    d_state: int = 10,
+    n_groups: int = 1,
+    identity_bias: float = 0.,
+    temperature: float = 1e-4,
+    n_ic: int = 4,
+    rollout_steps: int = None,
+    start_step: int = 0,
+    probe_steps: int = 200,
+    lr: float = 1e-2,
+    probe_rng_seed: int = 0,
+):
+    """
+    Probe-gain at multiple horizons k. Generates rollouts ONCE and trains
+    a fresh probe per (rule, k). The shape of gain-vs-k is the long-horizon
+    learnability signal:
+      - class IV: gain stays relatively high across k
+      - class III: gain near 0 at all k
+      - class II : gain high at small k, falls off
+      - class I  : gain near 0 (baseline ~ 0)
+
+    Returns
+    -------
+    gain       : (B, K)  probe gain at each k
+    final_loss : (B, K)
+    baseline   : (B, K)
+    ks         : tuple of ints (same as input)
+    """
+    ks = tuple(ks)
+    max_k = max(ks)
+    if rollout_steps is None:
+        rollout_steps = max_k + 8
+    assert rollout_steps > max_k, f"need rollout_steps ({rollout_steps}) > max k ({max_k})"
+
+    sims = _generate_rule_rollouts(
+        seeds, grid, d_state, n_groups, identity_bias, temperature,
+        rollout_steps, n_ic, start_step, ic_rng_seed=probe_rng_seed + 1,
+    )
+
+    gains, final_losses, baselines = [], [], []
+    for k in ks:
+        g, fl, bl = _train_probes_from_rollouts(
+            sims, d_state, n_groups, k, probe_steps, lr, probe_rng_seed,
+        )
+        gains.append(g); final_losses.append(fl); baselines.append(bl)
+
+    return (jnp.stack(gains, axis=-1),
+            jnp.stack(final_losses, axis=-1),
+            jnp.stack(baselines, axis=-1),
+            ks)
+
+
+def _train_probe_one_rule_preq(rng, rollouts, d_state, n_groups, probe_steps, lr):
+    """
+    Autoregressive (k=1) probe; scores by area under loss curve above the
+    final loss (prequential MDL, Finzi et al. arXiv:2601.03220).
+    rollouts: (n_ic, T, H, W, G).
+    Returns (preq_gain, preq_length, entropy_floor, baseline).
+    """
+    d_total = d_state * n_groups
+    T = rollouts.shape[1]
+
+    x = rollouts[:, :T - 1]
+    y = rollouts[:, 1:]
+
+    x_oh = jax.nn.one_hot(x, d_state)
+    x_oh = rearrange(x_oh, "I T H W G D -> (I T) H W (G D)")
+    y_flat = rearrange(y, "I T H W G -> (I T) H W G")
+
+    probe = _ProbeConv(d_total=d_total)
+    rng_init, _ = split(rng)
+    params = probe.init(rng_init, x_oh[0])
+
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(params)
+
+    def forward(p, batch):
+        logits = jax.vmap(probe.apply, in_axes=(None, 0))(p, batch)
+        return rearrange(logits, "N H W (G D) -> N H W G D", G=n_groups)
+
+    def loss_fn(p):
+        logits = forward(p, x_oh)
+        return optax.softmax_cross_entropy_with_integer_labels(logits, y_flat).mean()
+
+    def step(carry, _):
+        params, opt_state = carry
+        loss, grads = jax.value_and_grad(loss_fn)(params)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    (params, _), losses = lax.scan(step, (params, opt_state), None, length=probe_steps)
+    entropy_floor = losses[-1]
+
+    y_oh = jax.nn.one_hot(y_flat.reshape(-1), d_state)
+    counts = y_oh.sum(axis=0)
+    p_marg = counts / jnp.maximum(counts.sum(), 1.0)
+    baseline = -jnp.sum(p_marg * jnp.log(p_marg + 1e-10))
+
+    # area under loss curve above the floor; clip guards against SGD-noise dips
+    preq_length = jnp.sum(jnp.maximum(losses - entropy_floor, 0.0))
+    preq_gain = jnp.maximum(
+        0.0, preq_length / jnp.maximum(baseline * probe_steps, 1e-10)
+    )
+    return preq_gain, preq_length, entropy_floor, baseline
+
+
+def _train_probes_from_rollouts_preq(sims, d_state, n_groups, probe_steps, lr, probe_rng_seed):
+    """sims: (B, n_ic, T, H, W, G). One autoregressive probe per rule, vmapped."""
+    B = sims.shape[0]
+    probe_rngs = split(jax.random.PRNGKey(probe_rng_seed), B)
+    train_one = partial(
+        _train_probe_one_rule_preq,
+        d_state=d_state, n_groups=n_groups,
+        probe_steps=probe_steps, lr=lr,
+    )
+    return jax.jit(jax.vmap(train_one))(probe_rngs, sims)
+
+
+def compute_rule_probe_preq_batch(
+    seeds: jnp.ndarray,
+    grid: int = 12,
+    d_state: int = 10,
+    n_groups: int = 1,
+    identity_bias: float = 0.,
+    temperature: float = 1e-4,
+    n_ic: int = 4,
+    rollout_steps: int = 24,
+    start_step: int = 0,
+    probe_steps: int = 200,
+    lr: float = 1e-2,
+    probe_rng_seed: int = 0,
+):
+    """
+    Prequential autoregressive variant of compute_rule_probe_batch.
+
+    For each candidate rule:
+      1. Roll out n_ic trajectories.
+      2. Train a Conv3x3 probe autoregressively (k=1) on all (s_t, s_{t+1}) pairs.
+      3. Score by area under the loss curve above the final loss, an analog of
+         the prequential description length from Finzi et al. (arXiv:2601.03220).
+
+    Differences vs compute_rule_probe_batch:
+      - no fixed-k horizon: k=1 autoregressive over the whole rollout
+      - integrates the full loss trajectory, so late-emerging / non-stationary
+        structure contributes instead of being washed out by a single
+        final-loss readout
+
+    Returns
+    -------
+    preq_gain     : (B,)  preq_length / (baseline * probe_steps), in [0, 1]
+    preq_length   : (B,)  raw area-above-floor, in nats
+    entropy_floor : (B,)  final (computationally bounded) cross-entropy
+    baseline      : (B,)  marginal cross-entropy baseline
+    """
+    sims = _generate_rule_rollouts(
+        seeds, grid, d_state, n_groups, identity_bias, temperature,
+        rollout_steps, n_ic, start_step, ic_rng_seed=probe_rng_seed + 1,
+    )
+    return _train_probes_from_rollouts_preq(
+        sims, d_state, n_groups, probe_steps, lr, probe_rng_seed,
+    )
