@@ -13,7 +13,6 @@
     modelSelect: document.getElementById("modelSelect"),
     gridSelect: document.getElementById("gridSelect"),
     seedInput: document.getElementById("seedInput"),
-    viewMode: document.getElementById("viewMode"),
     pDrop: document.getElementById("pDrop"),
     diffGain: document.getElementById("diffGain"),
     patchSize: document.getElementById("patchSize"),
@@ -123,7 +122,6 @@
   function syncControls() {
     el("gridOut").value = grid + "x" + grid;
     el("seedOut").value = String(seed);
-    el("viewOut").value = controls.viewMode.value;
     el("pDropOut").value = Number(controls.pDrop.value).toFixed(2);
     el("diffGainOut").value = controls.diffGain.value + "x";
     el("patchSizeOut").value = controls.patchSize.value;
@@ -424,29 +422,14 @@
 
   function draw() {
     if (!imageData) return;
-    var mode = controls.viewMode.value;
-    var gain = Number(controls.diffGain.value);
     var data = imageData.data;
     var p = 0;
     for (var y = 0; y < grid; y += 1) {
       for (var x = 0; x < grid; x += 1) {
         var base = cellBase(x, y);
-        var r;
-        var g;
-        var b;
-        if (mode === "reference") {
-          r = reference[base];
-          g = dState > 1 ? reference[base + 1] : r;
-          b = dState > 2 ? reference[base + 2] : 0;
-        } else if (mode === "diff") {
-          r = Math.abs(state[base] - reference[base]) * gain;
-          g = Math.abs((dState > 1 ? state[base + 1] : state[base]) - (dState > 1 ? reference[base + 1] : reference[base])) * gain;
-          b = Math.abs((dState > 2 ? state[base + 2] : 0) - (dState > 2 ? reference[base + 2] : 0)) * gain;
-        } else {
-          r = state[base];
-          g = dState > 1 ? state[base + 1] : r;
-          b = dState > 2 ? state[base + 2] : 0;
-        }
+        var r = state[base];
+        var g = dState > 1 ? state[base + 1] : r;
+        var b = dState > 2 ? state[base + 2] : 0;
         data[p] = Math.round(clamp01(r) * 255);
         data[p + 1] = Math.round(clamp01(g) * 255);
         data[p + 2] = Math.round(clamp01(b) * 255);
@@ -564,10 +547,6 @@
       resetState(seed);
       syncControls();
       if (wasRunning) setRunning(true);
-    });
-    controls.viewMode.addEventListener("change", function () {
-      syncControls();
-      draw();
     });
     controls.pDrop.addEventListener("input", syncControls);
     controls.diffGain.addEventListener("input", function () {

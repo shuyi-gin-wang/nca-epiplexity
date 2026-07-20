@@ -85,14 +85,6 @@ gzip_ratio = gzip_bytes(quantized_rollout) / raw_bytes</code>
           <span>Seed <output id="seedOut">12353</output></span>
           <input id="seedInput" type="number" min="0" step="1" value="12353" />
         </label>
-        <label>
-          <span>View <output id="viewOut">live</output></span>
-          <select id="viewMode">
-            <option value="live">Live state</option>
-            <option value="diff">Perturbation diff</option>
-            <option value="reference">Reference</option>
-          </select>
-        </label>
         <input id="pDrop" type="hidden" value="0" />
         <output id="pDropOut" hidden>0.00</output>
         <input id="diffGain" type="hidden" value="6" />
