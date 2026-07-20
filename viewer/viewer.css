@@ -225,7 +225,8 @@ canvas {
   padding: 14px;
 }
 
-.controls section {
+.controls section,
+.controls details.control-section {
   padding: 14px 0;
   border-top: 1px solid var(--line);
 }
@@ -233,6 +234,35 @@ canvas {
 .controls section:first-child {
   padding-top: 0;
   border-top: 0;
+}
+
+.controls details.control-section > summary.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.controls details.control-section[open] > summary.section-title {
+  margin-bottom: 10px;
+}
+
+.controls details.control-section > summary.section-title::-webkit-details-marker {
+  display: none;
+}
+
+.controls details.control-section > summary.section-title::after {
+  content: "+";
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.controls details.control-section[open] > summary.section-title::after {
+  content: "-";
 }
 
 label {
