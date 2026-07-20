@@ -307,10 +307,11 @@
     syncControls();
   }
 
-  function loadModel(modelId) {
+  function loadModel(modelId, resetSeed) {
     var found = models.find(function (item) { return item.id === modelId; }) || models[0];
     if (!found) throw new Error("no exported models found");
     activeModel = found;
+    controls.modelSelect.value = activeModel.id;
     weights = unpackWeights(found);
     trainedGrid = Number(found.grid || 32);
     dState = Number(found.d_state || 3);
@@ -319,7 +320,7 @@
     controls.pDrop.value = String(Number(found.p_drop || 0));
     resetGridOptions();
     renderModelPanel();
-    resetState(selectedSeed());
+    resetState(typeof resetSeed === "number" ? resetSeed : selectedSeed());
     syncControls();
   }
 
@@ -543,17 +544,21 @@
 
     controls.modelSelect.addEventListener("change", function () {
       setRunning(false);
-      loadModel(controls.modelSelect.value);
+      loadModel(controls.modelSelect.value, DEFAULT_SEED);
+      setStatus("");
+      setRunning(true);
     });
     controls.seedInput.addEventListener("change", function () {
       setRunning(false);
       resetState(selectedSeed());
     });
     controls.gridSelect.addEventListener("change", function () {
+      var wasRunning = running;
       setRunning(false);
       grid = Number(controls.gridSelect.value);
       resetState(seed);
       syncControls();
+      if (wasRunning) setRunning(true);
     });
     controls.viewMode.addEventListener("change", function () {
       syncControls();
@@ -630,7 +635,7 @@
         models = payload.models || [];
         if (!models.length) throw new Error("models.json has no models");
         initModelList();
-        loadModel(models[0].id);
+        loadModel(models[0].id, DEFAULT_SEED);
         setRunning(true);
         setStatus("");
       })
