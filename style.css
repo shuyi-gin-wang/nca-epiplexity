@@ -68,6 +68,27 @@ h3 {
   font-size: 14px;
   margin: 0;
 }
+.viewer-cta {
+  margin: 20px 0 0;
+}
+
+.viewer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border: 1px solid #356f68;
+  border-radius: 7px;
+  padding: 0 14px;
+  background: #173f3b;
+  color: #e9fff9;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.viewer-link:hover {
+  border-color: #5cb9ad;
+  text-decoration: none;
+}
 
 .methods ul,
 .findings ul {

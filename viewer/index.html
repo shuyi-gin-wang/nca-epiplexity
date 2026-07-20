@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
+<title>Epiplexity NCA Viewer</title>
+<link rel="stylesheet" href="viewer.css" />
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div>
+      <a class="back-link" href="../">Project page</a>
+      <h1>Epiplexity NCA Viewer</h1>
+    </div>
+    <div class="actions">
+      <button id="runBtn" class="primary" type="button">Run</button>
+      <button id="stepBtn" type="button">Step</button>
+      <button id="resetBtn" class="warn" type="button">Reset</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="NCA state">
+      <div class="viewport">
+        <div class="viewport-head">
+          <h2>State</h2>
+          <output id="stepReadout">step 0 | seed --</output>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="stateCanvas" width="32" height="32"></canvas>
+          <div id="patchBox" class="patch-box"></div>
+        </div>
+      </div>
+      <section class="model-panel" aria-label="Selected model">
+        <p class="section-title">Selected Model</p>
+        <h2 id="modelTitle">Loading</h2>
+        <p id="modelSummary" class="summary">Loading exported checkpoints.</p>
+        <dl id="modelStats" class="stats"></dl>
+      </section>
+    </section>
+
+    <aside class="controls" aria-label="Viewer controls">
+      <section>
+        <p class="section-title">NCA</p>
+        <label>
+          <span>Checkpoint <output id="modelCount">0</output></span>
+          <select id="modelSelect"></select>
+        </label>
+        <label>
+          <span>Grid <output id="gridOut">trained</output></span>
+          <select id="gridSelect"></select>
+        </label>
+        <label>
+          <span>View <output id="viewOut">live</output></span>
+          <select id="viewMode">
+            <option value="live">Live state</option>
+            <option value="diff">Perturbation diff</option>
+            <option value="reference">Reference</option>
+          </select>
+        </label>
+        <label>
+          <span>Dropout <output id="pDropOut">0.00</output></span>
+          <input id="pDrop" type="range" min="0" max="0.95" step="0.01" value="0" />
+        </label>
+        <label>
+          <span>Diff gain <output id="diffGainOut">8x</output></span>
+          <input id="diffGain" type="range" min="1" max="64" step="1" value="8" />
+        </label>
+      </section>
+
+      <section>
+        <p class="section-title">Perturbation</p>
+        <label>
+          <span>Patch size <output id="patchSizeOut">5</output></span>
+          <input id="patchSize" type="range" min="1" max="31" step="2" value="5" />
+        </label>
+        <label>
+          <span>Strength <output id="strengthOut">1.00</output></span>
+          <input id="strength" type="range" min="0" max="1" step="0.01" value="1" />
+        </label>
+        <label>
+          <span>Mode</span>
+          <select id="noiseMode">
+            <option value="uniform">Uniform noise</option>
+            <option value="add">Add noise</option>
+            <option value="zero">Zero patch</option>
+            <option value="one">One patch</option>
+            <option value="invert">Invert patch</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <p class="section-title">Rollout</p>
+        <label>
+          <span>Steps per tick <output id="stepsOut">1</output></span>
+          <input id="stepsPerTick" type="range" min="1" max="32" step="1" value="1" />
+        </label>
+        <label>
+          <span>Tick interval <output id="intervalOut">80 ms</output></span>
+          <input id="tickMs" type="range" min="20" max="500" step="10" value="80" />
+        </label>
+      </section>
+
+      <div id="status" class="status" role="status"></div>
+    </aside>
+  </main>
+</div>
+<script src="viewer.js"></script>
+</body>
+</html>
