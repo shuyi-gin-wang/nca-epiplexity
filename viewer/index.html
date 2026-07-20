@@ -24,6 +24,32 @@
 
   <main>
     <section class="stage" aria-label="NCA state">
+      <section class="setup-panel" aria-label="Experiment setup">
+        <p class="section-title">Experiment Setup</p>
+        <p class="summary">
+          NCAs are evolved by an elitist strategy with candidates rolled out from random initial states.
+          Runs are selected for dynamics that stay non-collapsed while remaining hard for probe models to predict.
+        </p>
+        <div class="setup-grid">
+          <div>
+            <h2>NCA rule</h2>
+            <code class="formula">circular_pad_1
+-&gt; Conv3x3   3 -&gt; 4
+-&gt; Conv1x1   4 -&gt; 16
+-&gt; ReLU
+-&gt; Conv1x1  16 -&gt; 3
+
+x[t+1] = clamp(x[t] + 0.05 * f(x[t]), 0, 1)</code>
+          </div>
+          <div>
+            <h2>Fitness</h2>
+            <code class="formula">fitness = preq * 1[gzip_ratio &gt; threshold]
+
+preq = sum_t max(loss[t] - loss_final, 0)
+gzip_ratio = gzip_bytes(quantized_rollout) / raw_bytes</code>
+          </div>
+        </div>
+      </section>
       <div class="viewport">
         <div class="viewport-head">
           <h2>State</h2>
@@ -38,7 +64,9 @@
         <p class="section-title">Selected Model</p>
         <h2 id="modelTitle">Loading</h2>
         <p id="modelSummary" class="summary">Loading exported checkpoints.</p>
+        <div id="probeArchitectures" class="probe-architectures"></div>
         <dl id="modelStats" class="stats"></dl>
+        <div id="modelMedia" class="model-media"></div>
       </section>
     </section>
 
@@ -108,6 +136,15 @@
       <div id="status" class="status" role="status"></div>
     </aside>
   </main>
+</div>
+<div id="mediaDialog" class="media-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="media-dialog-card">
+    <div class="media-dialog-head">
+      <div id="mediaDialogTitle" class="media-dialog-title"></div>
+      <button id="mediaDialogClose" class="media-dialog-close" type="button" aria-label="Close enlarged plot">x</button>
+    </div>
+    <img id="mediaDialogImg" alt="" />
+  </div>
 </div>
 <script src="viewer.js"></script>
 </body>

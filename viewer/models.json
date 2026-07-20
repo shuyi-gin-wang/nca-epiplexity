@@ -1,6 +1,6 @@
 {
-  "format": "nca-epiplexity-static-v1",
-  "description": "Exported Conv3x3/Conv1x1 NCA checkpoints for the static browser viewer.",
+  "format": "nca-epiplexity-static-v2",
+  "description": "Exported local interactive viewer metadata, media, and Conv3x3/Conv1x1 NCA checkpoints for the static browser viewer.",
   "models": [
     {
       "id": "m00-probes-ensemble-direct-k16",
@@ -311,7 +311,57 @@
             -0.676645875
           ]
         }
-      }
+      },
+      "summary": "linear, mlp_wide, deep_mlp, transformer probe; direct K=16; 16x16 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "linear, mlp_wide, deep_mlp, transformer"
+        },
+        {
+          "label": "Horizon",
+          "value": "direct K=16"
+        },
+        {
+          "label": "Grid",
+          "value": "16x16"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Generations",
+          "value": "300"
+        },
+        {
+          "label": "Best score",
+          "value": "7.489"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "linear probe",
+          "body": "circular_pad_1\n-> Conv3x3   3 -> 3\n\ny_hat = f(x)"
+        },
+        {
+          "label": "mlp_wide probe (H=32)",
+          "body": "residual local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 32\n-> ReLU\n-> Conv1x1  32 -> 3\n\ny_hat = x + d(x)"
+        },
+        {
+          "label": "deep_mlp probe (H=16)",
+          "body": "residual deep local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 16\n-> ReLU\ncircular_pad_1\n-> Conv3x3  16 -> 16\n-> ReLU\n-> Conv1x1  16 -> 3\n\ny_hat = x + d(x)"
+        },
+        {
+          "label": "transformer probe (H=32)",
+          "body": "grid transformer probe\n-> Conv1x1   3 -> 32 + position\n-> LayerNorm\n-> 2-head self-attention\n-> LayerNorm\n-> FFN       32 -> 128 -> 32\n-> LayerNorm\n-> Conv1x1  32 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m00-probes-ensemble-direct-k16_training.png"
     },
     {
       "id": "m01-transformer-direct-k16",
@@ -643,7 +693,50 @@
             -1.76930809
           ]
         }
-      }
+      },
+      "summary": "transformer probe; direct K=16; 32x32 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "transformer"
+        },
+        {
+          "label": "Horizon",
+          "value": "direct K=16"
+        },
+        {
+          "label": "Grid",
+          "value": "32x32"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Population",
+          "value": "32"
+        },
+        {
+          "label": "Generations",
+          "value": "1500"
+        },
+        {
+          "label": "Best score",
+          "value": "3.715"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "transformer probe (H=32)",
+          "body": "grid transformer probe\n-> Conv1x1   3 -> 32 + position\n-> LayerNorm\n-> 2-head self-attention\n-> LayerNorm\n-> FFN       32 -> 128 -> 32\n-> LayerNorm\n-> Conv1x1  32 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m01-transformer-direct-k16_training.png",
+      "probe_curve_url": "media/m01-transformer-direct-k16_probe.png"
     },
     {
       "id": "m02-transformer-direct-k64",
@@ -975,7 +1068,50 @@
             -0.349333733
           ]
         }
-      }
+      },
+      "summary": "transformer probe; direct K=64; 32x32 grid; 128-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "transformer"
+        },
+        {
+          "label": "Horizon",
+          "value": "direct K=64"
+        },
+        {
+          "label": "Grid",
+          "value": "32x32"
+        },
+        {
+          "label": "Rollout",
+          "value": "128 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.35"
+        },
+        {
+          "label": "Population",
+          "value": "16"
+        },
+        {
+          "label": "Generations",
+          "value": "1500"
+        },
+        {
+          "label": "Best score",
+          "value": "3.958"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "transformer probe (H=32)",
+          "body": "grid transformer probe\n-> Conv1x1   3 -> 32 + position\n-> LayerNorm\n-> 2-head self-attention\n-> LayerNorm\n-> FFN       32 -> 128 -> 32\n-> LayerNorm\n-> Conv1x1  32 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m02-transformer-direct-k64_training.png",
+      "probe_curve_url": "media/m02-transformer-direct-k64_probe.png"
     },
     {
       "id": "m03-deeper-mlp-autoregressive-k16",
@@ -1302,7 +1438,50 @@
             1.138182044
           ]
         }
-      }
+      },
+      "summary": "deep_mlp probe; autoregressive K=16; 16x16 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "deep_mlp"
+        },
+        {
+          "label": "Horizon",
+          "value": "autoregressive K=16"
+        },
+        {
+          "label": "Grid",
+          "value": "16x16"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Population",
+          "value": "64"
+        },
+        {
+          "label": "Generations",
+          "value": "200"
+        },
+        {
+          "label": "Best score",
+          "value": "23.216"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "deep_mlp probe (H=16)",
+          "body": "residual deep local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 16\n-> ReLU\ncircular_pad_1\n-> Conv3x3  16 -> 16\n-> ReLU\n-> Conv1x1  16 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m03-deeper-mlp-autoregressive-k16_training.png",
+      "probe_curve_url": "media/m03-deeper-mlp-autoregressive-k16_probe.png"
     },
     {
       "id": "m04-deeper-mlp-direct-k16",
@@ -1629,7 +1808,50 @@
             0.88577199
           ]
         }
-      }
+      },
+      "summary": "deep_mlp probe; direct K=16; 16x16 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "deep_mlp"
+        },
+        {
+          "label": "Horizon",
+          "value": "direct K=16"
+        },
+        {
+          "label": "Grid",
+          "value": "16x16"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Population",
+          "value": "128"
+        },
+        {
+          "label": "Generations",
+          "value": "200"
+        },
+        {
+          "label": "Best score",
+          "value": "9.473"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "deep_mlp probe (H=16)",
+          "body": "residual deep local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 16\n-> ReLU\ncircular_pad_1\n-> Conv3x3  16 -> 16\n-> ReLU\n-> Conv1x1  16 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m04-deeper-mlp-direct-k16_training.png",
+      "probe_curve_url": "media/m04-deeper-mlp-direct-k16_probe.png"
     },
     {
       "id": "m05-mlp-small-autoregressive-k16",
@@ -1956,7 +2178,50 @@
             -0.877533317
           ]
         }
-      }
+      },
+      "summary": "mlp_small probe; autoregressive K=16; 16x16 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "mlp_small"
+        },
+        {
+          "label": "Horizon",
+          "value": "autoregressive K=16"
+        },
+        {
+          "label": "Grid",
+          "value": "16x16"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Population",
+          "value": "128"
+        },
+        {
+          "label": "Generations",
+          "value": "200"
+        },
+        {
+          "label": "Best score",
+          "value": "8.934"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "mlp_small probe (H=8)",
+          "body": "residual local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 8\n-> ReLU\n-> Conv1x1  8 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m05-mlp-small-autoregressive-k16_training.png",
+      "probe_curve_url": "media/m05-mlp-small-autoregressive-k16_probe.png"
     },
     {
       "id": "m06-mlp-small-direct-k8",
@@ -2283,7 +2548,48 @@
             -1.279349208
           ]
         }
-      }
+      },
+      "summary": "mlp_small probe; direct K=8; 16x16 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "mlp_small"
+        },
+        {
+          "label": "Horizon",
+          "value": "direct K=8"
+        },
+        {
+          "label": "Grid",
+          "value": "16x16"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Population",
+          "value": "128"
+        },
+        {
+          "label": "Generations",
+          "value": "200"
+        },
+        {
+          "label": "Best score",
+          "value": "10.766"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "mlp_small probe (H=8)",
+          "body": "residual local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 8\n-> ReLU\n-> Conv1x1  8 -> 3\n\ny_hat = x + d(x)"
+        }
+      ]
     },
     {
       "id": "m07-mlp-wide-direct-k16",
@@ -2610,7 +2916,50 @@
             -0.336623251
           ]
         }
-      }
+      },
+      "summary": "mlp_wide probe; direct K=16; 16x16 grid; 32-step rollout.",
+      "details": [
+        {
+          "label": "Probe",
+          "value": "mlp_wide"
+        },
+        {
+          "label": "Horizon",
+          "value": "direct K=16"
+        },
+        {
+          "label": "Grid",
+          "value": "16x16"
+        },
+        {
+          "label": "Rollout",
+          "value": "32 steps"
+        },
+        {
+          "label": "Gzip",
+          "value": "threshold > 0.3"
+        },
+        {
+          "label": "Population",
+          "value": "128"
+        },
+        {
+          "label": "Generations",
+          "value": "200"
+        },
+        {
+          "label": "Best score",
+          "value": "6.34"
+        }
+      ],
+      "probe_architectures": [
+        {
+          "label": "mlp_wide probe (H=32)",
+          "body": "residual local MLP\ncircular_pad_1\n-> Conv3x3   3 -> 32\n-> ReLU\n-> Conv1x1  32 -> 3\n\ny_hat = x + d(x)"
+        }
+      ],
+      "training_curve_url": "media/m07-mlp-wide-direct-k16_training.png",
+      "probe_curve_url": "media/m07-mlp-wide-direct-k16_probe.png"
     }
   ]
 }

@@ -127,22 +127,26 @@
   function renderModelPanel() {
     if (!activeModel) return;
     el("modelTitle").textContent = activeModel.label;
-    el("modelSummary").textContent = activeModel.source || "exported checkpoint";
+    el("modelSummary").textContent = activeModel.summary || activeModel.source || "exported checkpoint";
 
-    var stats = [
+    renderProbeArchitectures(activeModel);
+
+    var details = activeModel.details && activeModel.details.length ? activeModel.details.map(function (item) {
+      return [item.label, item.value];
+    }) : [
       ["grid", String(activeModel.grid)],
       ["d_state", String(activeModel.d_state)],
       ["dt", fmt(activeModel.dt)],
       ["p_drop", fmt(activeModel.p_drop || 0)],
       ["probe", activeModel.metadata && activeModel.metadata.probe_archs ? activeModel.metadata.probe_archs.join(", ") : activeModel.metadata && activeModel.metadata.probe_arch],
       ["horizon", horizonLabel(activeModel.metadata || {})],
-      ["gzip", gzipLabel(activeModel.metadata || {})],
-      ["source", activeModel.source]
+      ["gzip", gzipLabel(activeModel.metadata || {})]
     ];
+    details.push(["source", activeModel.source]);
 
     var root = el("modelStats");
     root.replaceChildren();
-    stats.forEach(function (item) {
+    details.forEach(function (item) {
       if (item[1] === undefined || item[1] === null || item[1] === "") return;
       var dtEl = document.createElement("dt");
       var ddEl = document.createElement("dd");
@@ -151,6 +155,88 @@
       root.appendChild(dtEl);
       root.appendChild(ddEl);
     });
+
+    renderModelMedia(activeModel);
+  }
+
+  function renderProbeArchitectures(model) {
+    var root = el("probeArchitectures");
+    root.replaceChildren();
+    (model.probe_architectures || []).forEach(function (arch) {
+      var details = document.createElement("details");
+      var summary = document.createElement("summary");
+      var body = document.createElement("code");
+      summary.textContent = arch.label;
+      body.className = "formula";
+      body.textContent = arch.body;
+      details.appendChild(summary);
+      details.appendChild(body);
+      root.appendChild(details);
+    });
+  }
+
+  function renderModelMedia(model) {
+    var root = el("modelMedia");
+    root.replaceChildren();
+    addMedia(root, model, "Training curve", model.training_curve_url);
+    addMedia(root, model, "Probe loss curves", model.probe_curve_url);
+    if (!root.children.length) {
+      var empty = document.createElement("div");
+      empty.className = "media-empty";
+      empty.textContent = "Curve images are not available for this checkpoint.";
+      root.appendChild(empty);
+    }
+  }
+
+  function addMedia(root, model, title, url) {
+    if (!url) return;
+    var block = document.createElement("div");
+    var head = document.createElement("div");
+    var label = document.createElement("div");
+    var zoom = document.createElement("button");
+    var image = document.createElement("img");
+    var dialogTitle = model.label + " - " + title;
+
+    block.className = "media-block";
+    head.className = "media-head";
+    label.className = "media-title";
+    label.textContent = title;
+    zoom.type = "button";
+    zoom.className = "media-zoom";
+    zoom.textContent = "Enlarge";
+    zoom.addEventListener("click", function () {
+      openMediaDialog(dialogTitle, url);
+    });
+    image.src = url;
+    image.alt = dialogTitle;
+    image.loading = "lazy";
+    image.addEventListener("click", function () {
+      openMediaDialog(dialogTitle, url);
+    });
+
+    head.appendChild(label);
+    head.appendChild(zoom);
+    block.appendChild(head);
+    block.appendChild(image);
+    root.appendChild(block);
+  }
+
+  function openMediaDialog(title, url) {
+    var dialog = el("mediaDialog");
+    var image = el("mediaDialogImg");
+    el("mediaDialogTitle").textContent = title;
+    image.src = url;
+    image.alt = title;
+    dialog.classList.add("open");
+    dialog.setAttribute("aria-hidden", "false");
+    el("mediaDialogClose").focus();
+  }
+
+  function closeMediaDialog() {
+    var dialog = el("mediaDialog");
+    dialog.classList.remove("open");
+    dialog.setAttribute("aria-hidden", "true");
+    el("mediaDialogImg").removeAttribute("src");
   }
 
   function fmt(value) {
@@ -466,6 +552,16 @@
     controls.strength.addEventListener("input", syncControls);
     controls.stepsPerTick.addEventListener("input", syncControls);
     controls.tickMs.addEventListener("input", syncControls);
+
+    el("mediaDialogClose").addEventListener("click", closeMediaDialog);
+    el("mediaDialog").addEventListener("click", function (evt) {
+      if (evt.target === el("mediaDialog")) closeMediaDialog();
+    });
+    window.addEventListener("keydown", function (evt) {
+      if (evt.key === "Escape" && el("mediaDialog").classList.contains("open")) {
+        closeMediaDialog();
+      }
+    });
 
     canvas.addEventListener("pointerdown", function (evt) {
       canvas.setPointerCapture(evt.pointerId);
