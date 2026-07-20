@@ -3,6 +3,7 @@
 
   var MODEL_URL = "models.json";
   var DEFAULT_SEED = 12353;
+  var DEFAULT_VIEW_GRID = 32;
 
   var canvas = document.getElementById("stateCanvas");
   var ctx = canvas.getContext("2d", { alpha: false });
@@ -102,6 +103,10 @@
       conv1bw: paramData(params, "conv1b.weight"),
       conv1bb: paramData(params, "conv1b.bias")
     };
+  }
+
+  function defaultViewGrid(baseGrid) {
+    return Math.max(Number(baseGrid) || DEFAULT_VIEW_GRID, DEFAULT_VIEW_GRID);
   }
 
   function viewGridChoices(baseGrid) {
@@ -316,7 +321,7 @@
     trainedGrid = Number(found.grid || 32);
     dState = Number(found.d_state || 3);
     dt = Number(found.dt || 0.05);
-    grid = trainedGrid;
+    grid = defaultViewGrid(trainedGrid);
     controls.pDrop.value = String(Number(found.p_drop || 0));
     resetGridOptions();
     renderModelPanel();
