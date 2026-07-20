@@ -32,8 +32,7 @@
   var seed = DEFAULT_SEED;
   var stepCount = 0;
   var running = false;
-  var frameHandle = 0;
-  var lastTick = 0;
+  var runTimer = 0;
   var dragging = false;
   var lastPoint = null;
 
@@ -452,25 +451,24 @@
     ctx.putImageData(imageData, 0, 0);
   }
 
-  function scheduleFrame(now) {
+  function runTick() {
     if (!running) return;
-    if (!lastTick || now - lastTick >= Number(controls.tickMs.value)) {
-      stepMany(Number(controls.stepsPerTick.value));
-      lastTick = now;
+    stepMany(Number(controls.stepsPerTick.value));
+  }
+
+  function restartRunTimer() {
+    if (runTimer) {
+      clearInterval(runTimer);
+      runTimer = 0;
     }
-    frameHandle = requestAnimationFrame(scheduleFrame);
+    if (!running) return;
+    runTimer = setInterval(runTick, Math.max(20, Number(controls.tickMs.value) || 80));
   }
 
   function setRunning(next) {
     running = next;
     el("runBtn").textContent = running ? "Pause" : "Run";
-    if (running) {
-      lastTick = 0;
-      frameHandle = requestAnimationFrame(scheduleFrame);
-    } else if (frameHandle) {
-      cancelAnimationFrame(frameHandle);
-      frameHandle = 0;
-    }
+    restartRunTimer();
   }
 
   function canvasPoint(evt) {
@@ -569,7 +567,10 @@
     controls.patchSize.addEventListener("input", syncControls);
     controls.strength.addEventListener("input", syncControls);
     controls.stepsPerTick.addEventListener("input", syncControls);
-    controls.tickMs.addEventListener("input", syncControls);
+    controls.tickMs.addEventListener("input", function () {
+      syncControls();
+      restartRunTimer();
+    });
 
     el("mediaDialogClose").addEventListener("click", closeMediaDialog);
     el("mediaDialog").addEventListener("click", function (evt) {
@@ -630,6 +631,7 @@
         if (!models.length) throw new Error("models.json has no models");
         initModelList();
         loadModel(models[0].id);
+        setRunning(true);
         setStatus("");
       })
       .catch(function (err) {
