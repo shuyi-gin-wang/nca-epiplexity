@@ -11,6 +11,7 @@
   var controls = {
     modelSelect: document.getElementById("modelSelect"),
     gridSelect: document.getElementById("gridSelect"),
+    seedInput: document.getElementById("seedInput"),
     viewMode: document.getElementById("viewMode"),
     pDrop: document.getElementById("pDrop"),
     diffGain: document.getElementById("diffGain"),
@@ -58,6 +59,12 @@
 
   function clamp01(value) {
     return value < 0 ? 0 : value > 1 ? 1 : value;
+  }
+
+  function selectedSeed() {
+    var parsed = Number(controls.seedInput.value);
+    if (!isFinite(parsed)) return DEFAULT_SEED;
+    return Math.max(0, Math.floor(parsed));
   }
 
   function makeRng(seedValue) {
@@ -111,6 +118,7 @@
 
   function syncControls() {
     el("gridOut").value = grid + "x" + grid;
+    el("seedOut").value = String(seed);
     el("viewOut").value = controls.viewMode.value;
     el("pDropOut").value = Number(controls.pDrop.value).toFixed(2);
     el("diffGainOut").value = controls.diffGain.value + "x";
@@ -280,6 +288,7 @@
     canvas.width = grid;
     canvas.height = grid;
     imageData = ctx.createImageData(grid, grid);
+    applyDelta._lastMasks = new Array(cells).fill(1);
   }
 
   function resetState(nextSeed) {
@@ -293,8 +302,10 @@
       reference[i] = state[i];
     }
     stepCount = 0;
+    controls.seedInput.value = String(seed);
     draw();
     syncReadout();
+    syncControls();
   }
 
   function loadModel(modelId) {
@@ -309,7 +320,7 @@
     controls.pDrop.value = String(Number(found.p_drop || 0));
     resetGridOptions();
     renderModelPanel();
-    resetState(DEFAULT_SEED);
+    resetState(selectedSeed());
     syncControls();
   }
 
@@ -372,11 +383,14 @@
     var cellCount = grid * grid;
 
     for (var cell = 0; cell < cellCount; cell += 1) {
-      var mask = pDrop <= 0 ? 1 : (advanceMask ? (stepRng() < keepProb ? 1 : 0) : undefined);
-      if (!advanceMask) {
-        mask = applyDelta._lastMasks[cell];
-      } else if (pDrop > 0) {
+      var mask;
+      if (pDrop <= 0) {
+        mask = 1;
+      } else if (advanceMask) {
+        mask = stepRng() < keepProb ? 1 : 0;
         applyDelta._lastMasks[cell] = mask;
+      } else {
+        mask = applyDelta._lastMasks[cell] === undefined ? 1 : applyDelta._lastMasks[cell];
       }
 
       for (var oc = 0; oc < dState; oc += 1) {
@@ -532,6 +546,10 @@
     controls.modelSelect.addEventListener("change", function () {
       setRunning(false);
       loadModel(controls.modelSelect.value);
+    });
+    controls.seedInput.addEventListener("change", function () {
+      setRunning(false);
+      resetState(selectedSeed());
     });
     controls.gridSelect.addEventListener("change", function () {
       setRunning(false);
