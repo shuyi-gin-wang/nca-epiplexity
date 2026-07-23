@@ -29,6 +29,7 @@
         <p class="summary">
           NCAs are evolved by an elitist strategy with candidates rolled out from random initial states.
           Runs are selected for dynamics that stay non-collapsed while remaining hard for probe models to predict.
+          Nonlinear probes predict a residual update, add it to the current state, and compare the resulting full state with the future state; under MSE, this is equivalent to fitting the residual directly.
         </p>
         <div class="setup-grid">
           <div>
